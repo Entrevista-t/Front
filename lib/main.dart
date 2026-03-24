@@ -4,6 +4,11 @@ import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/interview_screen.dart';
 import 'screens/results_screen.dart';
+import 'screens/landing_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/edit_profile_screen.dart';
+import 'screens/report_sent_screen.dart';
+import 'services/api_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,8 +17,22 @@ void main() {
 
 final _router = GoRouter(
   initialLocation: '/login',
+  debugLogDiagnostics: true,
+  redirect: (context, state) async {
+    final loggedIn = await ApiService.isLoggedIn();
+    final path = state.uri.path;
+    if (path == '/' ) return loggedIn ? '/home' : '/login';
+    return null;
+  },
   routes: [
-    GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+    GoRoute(path: '/landing', builder: (_, __) => const LandingScreen()),
+    GoRoute(
+      path: '/login',
+      builder: (_, state) {
+        final mode = state.uri.queryParameters['mode'];
+        return LoginScreen(initialSignUp: mode == 'register');
+      },
+    ),
     GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
     GoRoute(
       path: '/interview/:categoryId',
@@ -23,6 +42,12 @@ final _router = GoRouter(
       path: '/results/:sessionId',
       builder: (_, state) => ResultsScreen(sessionId: state.pathParameters['sessionId']!),
     ),
+    GoRoute(
+      path: '/report-sent/:sessionId',
+      builder: (_, state) => ReportSentScreen(sessionId: state.pathParameters['sessionId']!),
+    ),
+    GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+    GoRoute(path: '/profile/edit', builder: (_, __) => const EditProfileScreen()),
   ],
 );
 
@@ -36,11 +61,11 @@ class EntrevistatApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFE91E8C),
-          brightness: Brightness.light,
+          seedColor: const Color(0xFF00D4A1),
+          brightness: Brightness.dark,
         ),
         useMaterial3: true,
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: const Color(0xFF0F1117),
       ),
       routerConfig: _router,
     );

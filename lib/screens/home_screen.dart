@@ -3,7 +3,11 @@ import 'package:go_router/go_router.dart';
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
 
-const _pink = Color(0xFFE91E8C);
+const _green = Color(0xFF00D4A1);
+const _bgDark = Color(0xFF0F1117);
+const _cardDark = Color(0xFF1A1E2E);
+const _textLight = Color(0xFFE8EAF0);
+const _textMuted = Color(0xFF7B8099);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -45,37 +49,51 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: _bgDark,
       drawer: _buildDrawer(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        shadowColor: Colors.grey[200],
-        iconTheme: const IconThemeData(color: Colors.black87),
-        title: const Text("Entrevista't", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+        backgroundColor: _cardDark,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: _textLight),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/logo_entrevistat.png',
+              width: 32,
+              height: 32,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 10),
+            const Text("Entrevista't",
+                style: TextStyle(fontWeight: FontWeight.bold, color: _textLight, fontSize: 18)),
+          ],
+        ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: CircleAvatar(
               radius: 18,
-              backgroundColor: _pink.withValues(alpha: 0.15),
-              child: const Icon(Icons.person, color: _pink, size: 20),
+              backgroundColor: _green.withValues(alpha: 0.2),
+              child: const Icon(Icons.person, color: _green, size: 20),
             ),
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _pink))
+          ? const Center(child: CircularProgressIndicator(color: _green))
           : RefreshIndicator(
-              color: _pink,
+              color: _green,
+              backgroundColor: _cardDark,
               onRefresh: _load,
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
+                  _buildHeroSection(),
+                  const SizedBox(height: 24),
                   _buildPerformanceCard(),
                   const SizedBox(height: 24),
                   const Text('Categories',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textLight)),
                   const SizedBox(height: 14),
                   _buildCategoriesGrid(),
                   if (_recentSessions.isNotEmpty) ...[
@@ -84,73 +102,125 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Sessions recents',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textLight)),
                         Text('Veure totes',
-                            style: TextStyle(color: _pink, fontSize: 13, fontWeight: FontWeight.w600)),
+                            style: TextStyle(color: _green, fontSize: 13, fontWeight: FontWeight.w600)),
                       ],
                     ),
                     const SizedBox(height: 12),
                     ..._recentSessions.map(_buildSessionTile),
                   ],
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
     );
   }
 
+  Widget _buildHeroSection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A2640), Color(0xFF0F1117)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _green.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _green.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _green.withValues(alpha: 0.3)),
+                ),
+                child: const Text('New', style: TextStyle(color: _green, fontSize: 11, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Text('Master your\ninterviews with ',
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _textLight, height: 1.25)),
+          const Text('AI', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _green)),
+          const SizedBox(height: 10),
+          Text('Practica amb entrevistes simulades,\nanalitza el teu rendiment i millora cada dia.',
+              style: TextStyle(color: _textMuted, fontSize: 13, height: 1.5)),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => context.go('/interview/software'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _green,
+              foregroundColor: _bgDark,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: const Text('Fer entrevista', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
-      backgroundColor: Colors.white,
+      backgroundColor: _cardDark,
       child: SafeArea(
         child: Column(
           children: [
-            // User header
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 16, 20),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor: _pink.withValues(alpha: 0.15),
-                    child: const Icon(Icons.person, color: _pink, size: 32),
+                    backgroundColor: _green.withValues(alpha: 0.2),
+                    child: const Icon(Icons.person, color: _green, size: 32),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Usuari', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const Text('Usuari',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textLight)),
                         Text('usuari@entrevistat.com',
-                            style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                            style: TextStyle(color: _textMuted, fontSize: 12)),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.grey),
+                    icon: const Icon(Icons.close, color: _textMuted),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
-            Divider(color: Colors.grey[200], height: 1),
+            Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
             const SizedBox(height: 8),
-
-            // Menu items
-            _drawerItem(Icons.home_rounded, 'Home', 0, context),
-            _drawerItem(Icons.bar_chart_rounded, 'Informes', 1, context),
-            _drawerItem(Icons.person_outline_rounded, 'Perfil', 2, context),
-
+            _drawerItem(Icons.home_rounded, 'Home', 0, context,
+                onTap: () { Navigator.pop(context); context.go('/home'); }),
+            _drawerItem(Icons.person_outline_rounded, 'Perfil', 1, context,
+                onTap: () { Navigator.pop(context); context.go('/profile'); }),
+            _drawerItem(Icons.bar_chart_rounded, 'Informes', 2, context,
+                onTap: () { Navigator.pop(context); context.go('/profile'); }),
             const Spacer(),
-            Divider(color: Colors.grey[200], height: 1),
-            _drawerItem(Icons.settings_rounded, 'Configuració', 3, context),
+            Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
+            _drawerItem(Icons.edit_outlined, 'Editar perfil', 3, context,
+                onTap: () { Navigator.pop(context); context.go('/profile/edit'); }),
             const SizedBox(height: 12),
-
-            // Logout
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: ListTile(
-                leading: const Icon(Icons.logout_rounded, color: Colors.grey),
-                title: Text('Tancar sessió', style: TextStyle(color: Colors.grey[700])),
+                leading: const Icon(Icons.logout_rounded, color: _textMuted),
+                title: const Text('Tancar sessió', style: TextStyle(color: _textMuted)),
                 onTap: () async {
                   await ApiService.logout();
                   if (context.mounted) context.go('/login');
@@ -164,21 +234,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _drawerItem(IconData icon, String label, int index, BuildContext context) {
+  Widget _drawerItem(IconData icon, String label, int index, BuildContext context,
+      {VoidCallback? onTap}) {
     final selected = _selectedDrawerIndex == index;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: ListTile(
-        leading: Icon(icon, color: selected ? _pink : Colors.grey[500]),
+        leading: Icon(icon, color: selected ? _green : _textMuted),
         title: Text(label,
             style: TextStyle(
-              color: selected ? _pink : Colors.grey[700],
+              color: selected ? _green : _textMuted,
               fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             )),
-        trailing: Icon(Icons.chevron_right, color: selected ? _pink : Colors.grey[400], size: 20),
-        tileColor: selected ? _pink.withValues(alpha: 0.08) : null,
+        trailing: Icon(Icons.chevron_right, color: selected ? _green : _textMuted, size: 20),
+        tileColor: selected ? _green.withValues(alpha: 0.1) : null,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        onTap: () {
+        onTap: onTap ?? () {
           setState(() { _selectedDrawerIndex = index; });
           Navigator.pop(context);
         },
@@ -191,9 +262,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardDark,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha: 0.12), blurRadius: 12, offset: const Offset(0, 4))],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,14 +273,13 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Rendiment General',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-              Text('Últim mes', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textLight)),
+              Text('Últim mes', style: TextStyle(color: _textMuted, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 20),
           Row(
             children: [
-              // Circular progress
               SizedBox(
                 width: 90, height: 90,
                 child: Stack(
@@ -217,13 +287,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     CircularProgressIndicator(
                       value: avg / 100,
-                      strokeWidth: 10,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: const AlwaysStoppedAnimation(_pink),
+                      strokeWidth: 8,
+                      backgroundColor: Colors.white.withValues(alpha: 0.08),
+                      valueColor: const AlwaysStoppedAnimation(_green),
                       strokeCap: StrokeCap.round,
                     ),
                     Text('${avg.toInt()}%',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _textLight)),
                   ],
                 ),
               ),
@@ -233,11 +303,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('${_recentSessions.length} sessions',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black87)),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: _textLight)),
                     const SizedBox(height: 4),
-                    Text('completades', style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+                    const Text('completades', style: TextStyle(color: _textMuted, fontSize: 13)),
                     const SizedBox(height: 12),
-                    _buildMiniStat(Icons.trending_up_rounded, 'Millora progressiva', Colors.green),
+                    _buildMiniStat(Icons.trending_up_rounded, 'Millora progressiva', _green),
                   ],
                 ),
               ),
@@ -253,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Icon(icon, color: color, size: 16),
         const SizedBox(width: 4),
-        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+        Text(label, style: const TextStyle(color: _textMuted, fontSize: 12)),
       ],
     );
   }
@@ -273,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildCategoryCard(InterviewCategory cat) {
     return Material(
-      color: Colors.white,
+      color: _cardDark,
       borderRadius: BorderRadius.circular(16),
       elevation: 0,
       child: InkWell(
@@ -282,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey[200]!),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
           ),
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -292,13 +362,13 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _pink.withValues(alpha: 0.1),
+                  color: _green.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(cat.icon, color: _pink, size: 22),
+                child: Icon(cat.icon, color: _green, size: 22),
               ),
               Text(cat.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87),
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: _textLight),
                   maxLines: 2, overflow: TextOverflow.ellipsis),
             ],
           ),
@@ -309,30 +379,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSessionTile(InterviewSession session) {
     final scoreColor = session.overallScore >= 75
-        ? Colors.green
+        ? _green
         : session.overallScore >= 50
             ? Colors.orange
-            : Colors.red;
+            : Colors.redAccent;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardDark,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha: 0.06), blurRadius: 6)],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: CircleAvatar(
-          backgroundColor: scoreColor.withValues(alpha: 0.12),
+          backgroundColor: scoreColor.withValues(alpha: 0.15),
           child: Text(
             '${session.overallScore.toInt()}',
             style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold, fontSize: 13),
           ),
         ),
-        title: Text(session.categoryName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-        subtitle: Text(session.formattedDate, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        title: Text(session.categoryName,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: _textLight)),
+        subtitle: Text(session.formattedDate, style: const TextStyle(color: _textMuted, fontSize: 12)),
+        trailing: const Icon(Icons.chevron_right, color: _textMuted),
         onTap: () => context.go('/results/${session.id}'),
       ),
     );

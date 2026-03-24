@@ -103,7 +103,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
         questionId: _questions[_currentIndex].id,
         videoPath: file.path,
       );
-      if (mounted) context.go('/results/$sessionId');
+      if (mounted) context.go('/report-sent/$sessionId');
     } catch (e) {
       setState(() { _uploading = false; _error = 'Error en enviar la gravació: $e'; });
     }
