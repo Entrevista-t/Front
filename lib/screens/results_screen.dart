@@ -17,15 +17,67 @@ class ResultsScreen extends StatefulWidget {
   State<ResultsScreen> createState() => _ResultsScreenState();
 }
 
-class _ResultsScreenState extends State<ResultsScreen> {
+/// Total number of staggered sections for entrance animation.
+const _sectionCount = 7;
+
+class _ResultsScreenState extends State<ResultsScreen>
+    with TickerProviderStateMixin {
   InterviewResult? _result;
   bool _loading = true;
   bool _downloading = false;
 
+  // Animated score circles controller
+  late final AnimationController _scoreCtrl;
+
+  // Staggered entrance controller
+  late final AnimationController _staggerCtrl;
+  late final List<Animation<double>> _fadeAnims;
+  late final List<Animation<Offset>> _slideAnims;
+
   @override
   void initState() {
     super.initState();
+
+    _scoreCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    _staggerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600 + (_sectionCount - 1) * 100),
+    );
+
+    // Pre-build staggered intervals
+    final totalMs = 600 + (_sectionCount - 1) * 100;
+    _fadeAnims = List.generate(_sectionCount, (i) {
+      final start = (i * 100) / totalMs;
+      final end = (i * 100 + 600) / totalMs;
+      return CurvedAnimation(
+        parent: _staggerCtrl,
+        curve: Interval(start, end.clamp(0.0, 1.0), curve: kCurveEntrance),
+      );
+    });
+    _slideAnims = List.generate(_sectionCount, (i) {
+      final start = (i * 100) / totalMs;
+      final end = (i * 100 + 600) / totalMs;
+      return Tween<Offset>(
+        begin: const Offset(0, 0.08),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _staggerCtrl,
+        curve: Interval(start, end.clamp(0.0, 1.0), curve: kCurveEntrance),
+      ));
+    });
+
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scoreCtrl.dispose();
+    _staggerCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -36,6 +88,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
       setState(() { _result = InterviewResult.mock(); });
     } finally {
       setState(() { _loading = false; });
+      _scoreCtrl.forward();
+      _staggerCtrl.forward();
     }
   }
 
@@ -57,6 +111,17 @@ class _ResultsScreenState extends State<ResultsScreen> {
     } finally {
       setState(() { _downloading = false; });
     }
+  }
+
+  /// Wraps a section widget with staggered fade + slide entrance.
+  Widget _entrance(int index, Widget child) {
+    return SlideTransition(
+      position: _slideAnims[index],
+      child: FadeTransition(
+        opacity: _fadeAnims[index],
+        child: child,
+      ),
+    );
   }
 
   @override
@@ -84,33 +149,47 @@ class _ResultsScreenState extends State<ResultsScreen> {
         ),
         title: const Text('Informe'),
         actions: [
-          IconButton(
-            icon: _downloading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.picture_as_pdf_rounded),
-            onPressed: _downloading ? null : _downloadPdf,
+          Padding(
+            padding: const EdgeInsets.only(right: kS8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: kAccent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(kRadiusSm),
+              ),
+              child: IconButton(
+                icon: _downloading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.picture_as_pdf_rounded),
+                onPressed: _downloading ? null : _downloadPdf,
+                tooltip: 'Descarregar PDF',
+              ),
+            ),
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(kPagePadding),
         children: [
-          _buildCategoryHeader(r),
+          _entrance(0, _buildCategoryHeader(r)),
           const SizedBox(height: kS16),
-          _buildPerformanceSection(r),
+          _entrance(1, _buildPerformanceSection(r)),
           const SizedBox(height: kS16),
-          _buildStrengthsWeaknessesChart(r),
+          _entrance(2, _buildStrengthsWeaknessesChart(r)),
           const SizedBox(height: kS16),
-          _buildAiFeedback(r),
+          _entrance(3, _buildAiFeedback(r)),
           const SizedBox(height: kS16),
-          _buildDetailCards(r),
+          _entrance(4, _buildDetailCards(r)),
           const SizedBox(height: kS16),
-          _buildReportsList(r),
+          _entrance(5, _buildReportsList(r)),
           const SizedBox(height: kS24),
-          ElevatedButton(
+          _entrance(6, ElevatedButton(
             onPressed: () => context.go('/home'),
             child: const Text('Nova simulació'),
-          ),
+          )),
           const SizedBox(height: kS8),
         ],
       ),
@@ -149,30 +228,42 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
   Widget _circleScore(String label, double value) {
     final color = scoreColor(value);
-    return Column(
-      children: [
-        SizedBox(
-          width: 82, height: 82,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              CircularProgressIndicator(
-                value: value / 100,
-                strokeWidth: 9,
-                backgroundColor: kBorderSubtle,
-                valueColor: AlwaysStoppedAnimation(color),
-                strokeCap: StrokeCap.round,
+    final curved = CurvedAnimation(
+      parent: _scoreCtrl,
+      curve: Curves.easeOutCubic,
+    );
+    final tween = Tween<double>(begin: 0, end: value / 100);
+
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, child) {
+        final animValue = tween.evaluate(curved);
+        return Column(
+          children: [
+            SizedBox(
+              width: 82, height: 82,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    value: animValue,
+                    strokeWidth: 9,
+                    backgroundColor: kBorderSubtle,
+                    valueColor: AlwaysStoppedAnimation(color),
+                    strokeCap: StrokeCap.round,
+                  ),
+                  Text(
+                    '${(animValue * 100).toInt()}%',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ],
               ),
-              Text(
-                '${value.toInt()}%',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: kS8),
-        Text(label, style: Theme.of(context).textTheme.labelSmall),
-      ],
+            ),
+            const SizedBox(height: kS8),
+            Text(label, style: Theme.of(context).textTheme.labelSmall),
+          ],
+        );
+      },
     );
   }
 
@@ -215,11 +306,11 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 borderData: FlBorderData(show: false),
                 gridData: const FlGridData(show: false),
                 barGroups: [
-                  _bar(0, r.contentScore, kAccent.withValues(alpha: 0.5)),
-                  _bar(1, r.fluencyScore, kAccent),
-                  _bar(2, r.eyeContactPercent, kAccent.withValues(alpha: 0.5)),
-                  _bar(3, r.structureScore, kAccent),
-                  _bar(4, r.confidenceScore, kAccent.withValues(alpha: 0.5)),
+                  _bar(0, r.contentScore),
+                  _bar(1, r.fluencyScore),
+                  _bar(2, r.eyeContactPercent),
+                  _bar(3, r.structureScore),
+                  _bar(4, r.confidenceScore),
                 ],
               ),
             ),
@@ -229,11 +320,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
     );
   }
 
-  BarChartGroupData _bar(int x, double value, Color color) {
+  BarChartGroupData _bar(int x, double value) {
     return BarChartGroupData(x: x, barRods: [
       BarChartRodData(
         toY: value,
-        color: color,
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [kAccent.withValues(alpha: 0.6), kAccent],
+        ),
         width: 22,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(kRadiusSm)),
       ),
@@ -241,23 +336,36 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 
   Widget _buildAiFeedback(InterviewResult r) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            const Icon(Icons.auto_awesome_rounded, color: kAccent, size: 18),
-            const SizedBox(width: kS8),
-            AppSectionHeader(title: 'Feedback IA'),
-          ]),
-          const SizedBox(height: kS12),
-          Text(
-            r.aiFeedback,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: kTextSecondary, height: 1.6,
+    final radius = BorderRadius.circular(kRadiusMd);
+    return Container(
+      decoration: BoxDecoration(
+        gradient: kGradientCardBorder,
+        borderRadius: radius,
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(1),
+        padding: const EdgeInsets.all(kS24),
+        decoration: BoxDecoration(
+          color: kBgSurface,
+          borderRadius: radius,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Icon(Icons.auto_awesome_rounded, color: kAccent, size: 18),
+              const SizedBox(width: kS8),
+              AppSectionHeader(title: 'Feedback IA'),
+            ]),
+            const SizedBox(height: kS12),
+            Text(
+              r.aiFeedback,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: kTextSecondary, height: 1.6,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -294,7 +402,20 @@ class _ResultsScreenState extends State<ResultsScreen> {
       ),
       child: Column(
         children: [
-          Icon(icon, color: kAccent, size: 18),
+          Container(
+            padding: const EdgeInsets.all(kS6),
+            decoration: BoxDecoration(
+              color: kAccent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(kRadiusSm),
+              boxShadow: [
+                BoxShadow(
+                  color: kAccent.withValues(alpha: 0.15),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Icon(icon, color: kAccent, size: 18),
+          ),
           const SizedBox(height: kS8),
           Text(
             value,

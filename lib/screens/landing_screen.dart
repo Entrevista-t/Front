@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
@@ -223,34 +224,40 @@ class _LandingScreenState extends State<LandingScreen>
 
   // ── NAV BAR ──────────────────────────────────────────────────────────────
   Widget _buildNavBar(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: kPagePadding, vertical: 14),
-      decoration: BoxDecoration(
-        color: kBgSurface.withValues(alpha: 0.85),
-        border: const Border(bottom: BorderSide(color: kBorderSubtle)),
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: kPagePadding, vertical: 10),
+          decoration: BoxDecoration(
+            color: kBgSurface.withValues(alpha: 0.85),
+            border: const Border(bottom: BorderSide(color: kBorderSubtle)),
+          ),
+          child: Row(children: [
+            // Left buttons
+            OutlinedButton(
+              onPressed: () => context.go('/login'),
+              style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 42),
+                  padding: const EdgeInsets.symmetric(horizontal: kS20)),
+              child: const Text('Iniciar sessió'),
+            ),
+            const Spacer(),
+            // Centered logo
+            Image.asset('assets/images/logo_entrevistat.png',
+                width: 36, height: 36, fit: BoxFit.contain),
+            const Spacer(),
+            // Right button
+            ElevatedButton(
+              onPressed: () => context.go('/login?mode=register'),
+              style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(0, 42),
+                  padding: const EdgeInsets.symmetric(horizontal: kS20)),
+              child: const Text("Registra't"),
+            ),
+          ]),
+        ),
       ),
-      child: Row(children: [
-        Image.asset('assets/images/logo_entrevistat.png',
-            width: 28, height: 28, fit: BoxFit.contain),
-        const SizedBox(width: kS8),
-        Text("Entrevista't", style: Theme.of(context).textTheme.titleSmall),
-        const Spacer(),
-        OutlinedButton(
-          onPressed: () => context.go('/login'),
-          style: OutlinedButton.styleFrom(
-              minimumSize: const Size(0, 42),
-              padding: const EdgeInsets.symmetric(horizontal: kS20)),
-          child: const Text('Iniciar sessió'),
-        ),
-        const SizedBox(width: kS8),
-        ElevatedButton(
-          onPressed: () => context.go('/login?mode=register'),
-          style: ElevatedButton.styleFrom(
-              minimumSize: const Size(0, 42),
-              padding: const EdgeInsets.symmetric(horizontal: kS20)),
-          child: const Text("Registra't"),
-        ),
-      ]),
     );
   }
 
@@ -381,16 +388,40 @@ class _LandingScreenState extends State<LandingScreen>
 
   // ── METRICS ──────────────────────────────────────────────────────────────
   Widget _buildMetrics(BuildContext context) {
-    final items = [
+    final videoMetrics = [
+      _Metric('Presència en càmera', '96 %', Icons.person_search_outlined, kAccentTeal,
+          "Detectem si el candidat es manté dins l'enquadrament durant tota l'entrevista."),
       _Metric('Contacte visual', '68 %', Icons.visibility_outlined, kAccentTeal,
-          "Mesurem quan mantens la mirada cap a la càmera durant l'entrevista."),
-      _Metric('Paraules per minut', '142', Icons.speed_rounded, kAccentAmber,
-          'Analitzem el ritme de parla per detectar si vas massa ràpid o lent.'),
-      _Metric('Paraules falca', '7', Icons.record_voice_over_outlined, kAccentRose,
-          "Comptem paraules falca com 'o sigui', 'eh', 'bueno' que afecten la fluïdesa."),
-      _Metric('Puntuació global', '74 %', Icons.analytics_outlined, kAccentSky,
-          'Combinació de contingut, fluïdesa, estructura i confiança.'),
+          "Mesurem quan mantens la mirada cap a la càmera per transmetre seguretat."),
+      _Metric('Alertes de desconnexió', '3', Icons.warning_amber_rounded, kAccentAmber,
+          "Detecció en temps real de quan apartes la mirada: possible lectura de notes o distraccions."),
+      _Metric('Calma i concentració', '82 %', Icons.self_improvement_rounded, kAccentSky,
+          "Temps que el candidat es manté professional i serè sota pressió."),
+      _Metric('Empatia i positivisme', '71 %', Icons.sentiment_satisfied_alt_rounded, kAccentTeal,
+          "Temps mostrant actitud afable, somriures o recepció positiva. Mesura habilitats toves."),
+      _Metric('Tensió detectada', '12 %', Icons.mood_bad_outlined, kAccentRose,
+          "Pics d'estrès detectats: arrufar el front, rigidesa facial o signes de nerviosisme."),
+      _Metric('Intensitat expressiva', '65 %', Icons.face_retouching_natural_rounded, kAccentAmber,
+          "Quant esforç facial fa el candidat per comunicar-se i emfatitzar els punts clau."),
     ];
+
+    final audioMetrics = [
+      _Metric("Alineació amb la pregunta", '78 %', Icons.track_changes_rounded, kAccentSky,
+          "Mesura si la resposta va directa al gra o si el candidat s'allunya del tema."),
+      _Metric('Estructura del discurs', '70 %', Icons.account_tree_outlined, kAccentTeal,
+          "Avalua si les frases segueixen un fil lògic ordenat (com el mètode STAR) o són caòtiques."),
+      _Metric("Densitat d'informació", '63 %', Icons.compress_rounded, kAccentAmber,
+          "Ratio de paraules amb valor real vs. paraules buides o redundants. Detecta qui parla molt però diu poc."),
+      _Metric("Índex d'especificitat", '59 %', Icons.format_quote_rounded, kAccentRose,
+          "Mesura si el candidat usa termes específics o abusa de pronoms vagues com 'vam fer allò'."),
+      _Metric('Riquesa lèxica', '72 %', Icons.menu_book_rounded, kAccentSky,
+          "Varietat del vocabulari i domini de la terminologia professional del sector."),
+      _Metric('Seguretat i confiança', '66 %', Icons.mic_rounded, kAccentTeal,
+          "Comptabilitza silencis incòmodes i muletilles de dubte. El millor detector de nerviosisme."),
+      _Metric('Ritme de comunicació', '142 ppm', Icons.speed_rounded, kAccentAmber,
+          "Paraules per minut. Massa ràpid denota ansietat, massa lent pot avorrir l'entrevistador."),
+    ];
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
       child: Column(children: [
@@ -404,42 +435,100 @@ class _LandingScreenState extends State<LandingScreen>
                   color: kTextSecondary),
               textAlign: TextAlign.center),
         ])),
+
         const SizedBox(height: kS32),
-        ...items.asMap().entries.map((e) => _ScrollReveal(
-            delay: Duration(milliseconds: 80 * e.key),
-            child: _metricCard(context, e.value))),
+
+        // Video section
+        _ScrollReveal(child: _metricSectionLabel(context, Icons.videocam_outlined, 'Anàlisi de vídeo')),
+        const SizedBox(height: kS16),
+        _buildMetricGrid(context, videoMetrics),
+
+        const SizedBox(height: kS32),
+
+        // Audio section
+        _ScrollReveal(child: _metricSectionLabel(context, Icons.graphic_eq_rounded, 'Anàlisi de veu i contingut')),
+        const SizedBox(height: kS16),
+        _buildMetricGrid(context, audioMetrics),
       ]),
     );
   }
 
-  Widget _metricCard(BuildContext context, _Metric m) => Padding(
-        padding: const EdgeInsets.only(bottom: kS16),
+  Widget _metricSectionLabel(BuildContext context, IconData icon, String label) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: kAccent, size: 18),
+        const SizedBox(width: kS8),
+        Text(label,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: kAccent,
+            )),
+      ],
+    );
+  }
+
+  Widget _buildMetricGrid(BuildContext context, List<_Metric> items) {
+    return LayoutBuilder(builder: (context, constraints) {
+      final wide = constraints.maxWidth > 600;
+      final cards = items.asMap().entries.map((e) => _ScrollReveal(
+          delay: Duration(milliseconds: 80 * e.key),
+          child: _metricCard(context, e.value, constraints.maxWidth))).toList();
+      if (wide) {
+        final halfW = (constraints.maxWidth - kS16) / 2;
+        final isOdd = cards.length.isOdd;
+        return Wrap(
+          spacing: kS16,
+          runSpacing: kS16,
+          crossAxisAlignment: WrapCrossAlignment.start,
+          children: cards.asMap().entries.map((e) => SizedBox(
+              width: (isOdd && e.key == cards.length - 1)
+                  ? constraints.maxWidth
+                  : halfW,
+              child: e.value)).toList(),
+        );
+      }
+      return Column(children: cards);
+    });
+  }
+
+  Widget _metricCard(BuildContext context, _Metric m, [double? parentWidth]) => Padding(
+        padding: parentWidth != null && parentWidth > 600
+            ? EdgeInsets.zero
+            : const EdgeInsets.only(bottom: kS16),
         child: Container(
-          padding: const EdgeInsets.all(kS20),
           decoration: BoxDecoration(
               color: kBgSurface,
               borderRadius: BorderRadius.circular(kRadiusMd),
               border: Border.all(color: kBorderSubtle)),
+          clipBehavior: Clip.antiAlias,
           child: Row(children: [
-            Container(width: 48, height: 48,
-                decoration: BoxDecoration(
-                    color: m.color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(kRadiusMd)),
-                child: Icon(m.icon, color: m.color, size: 24)),
-            const SizedBox(width: kS16),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  Text(m.label, style: Theme.of(context).textTheme.titleSmall),
-                  const Spacer(),
-                  Text(m.value, style: TextStyle(
-                      color: m.color, fontWeight: FontWeight.w700, fontSize: 16)),
+            Container(width: 3, height: 90, color: m.color),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(kS20),
+                child: Row(children: [
+                  Container(width: 48, height: 48,
+                      decoration: BoxDecoration(
+                          color: m.color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(kRadiusMd)),
+                      child: Icon(m.icon, color: m.color, size: 24)),
+                  const SizedBox(width: kS16),
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(children: [
+                        Text(m.label, style: Theme.of(context).textTheme.titleSmall),
+                        const Spacer(),
+                        Text(m.value, style: TextStyle(
+                            color: m.color, fontWeight: FontWeight.w700, fontSize: 16)),
+                      ]),
+                      const SizedBox(height: kS4),
+                      Text(m.desc, style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  )),
                 ]),
-                const SizedBox(height: kS4),
-                Text(m.desc, style: Theme.of(context).textTheme.bodySmall),
-              ],
-            )),
+              ),
+            ),
           ]),
         ),
       );
@@ -458,42 +547,73 @@ class _LandingScreenState extends State<LandingScreen>
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _ScrollReveal(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Funcionalitats',
-                  style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: kS4),
-              Text('Tot el que necessites per dominar les entrevistes.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: kTextSecondary)),
-            ])),
+      child: Column(children: [
+        _ScrollReveal(child: Column(children: [
+          Text('Funcionalitats',
+              style: Theme.of(context).textTheme.headlineMedium,
+              textAlign: TextAlign.center),
+          const SizedBox(height: kS8),
+          Text('Tot el que necessites per dominar les entrevistes.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: kTextSecondary),
+              textAlign: TextAlign.center),
+        ])),
         const SizedBox(height: kS32),
-        ...items.asMap().entries.map((e) => _ScrollReveal(
-            delay: Duration(milliseconds: 80 * e.key),
-            child: _featRow(context, e.value))),
+        LayoutBuilder(builder: (context, constraints) {
+          final cards = items.asMap().entries.map((e) => _ScrollReveal(
+              delay: Duration(milliseconds: 80 * e.key),
+              child: _featCard(context, e.value, constraints.maxWidth))).toList();
+          if (constraints.maxWidth > 600) {
+            return Wrap(
+              spacing: kS16,
+              runSpacing: kS16,
+              crossAxisAlignment: WrapCrossAlignment.start,
+              children: cards.map((c) => SizedBox(
+                  width: (constraints.maxWidth - kS16) / 2,
+                  child: c)).toList(),
+            );
+          }
+          return Column(children: cards);
+        }),
       ]),
     );
   }
 
-  Widget _featRow(BuildContext context, _Feat f) => Padding(
-        padding: const EdgeInsets.only(bottom: kS24),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(width: 44, height: 44,
-              decoration: BoxDecoration(
-                  color: f.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(kRadiusMd)),
-              child: Icon(f.icon, color: f.color, size: 22)),
-          const SizedBox(width: kS16),
-          Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(f.title, style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: kS4),
-                Text(f.desc, style: Theme.of(context).textTheme.bodySmall),
-              ])),
-        ]),
+  Widget _featCard(BuildContext context, _Feat f, [double? parentWidth]) => Padding(
+        padding: parentWidth != null && parentWidth > 600
+            ? EdgeInsets.zero
+            : const EdgeInsets.only(bottom: kS16),
+        child: Container(
+          decoration: BoxDecoration(
+              color: kBgSurface,
+              borderRadius: BorderRadius.circular(kRadiusMd),
+              border: Border.all(color: kBorderSubtle)),
+          clipBehavior: Clip.antiAlias,
+          child: Row(children: [
+            Container(width: 3, height: 90, color: f.color),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(kS20),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(width: 44, height: 44,
+                      decoration: BoxDecoration(
+                          color: f.color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(kRadiusMd)),
+                      child: Icon(f.icon, color: f.color, size: 22)),
+                  const SizedBox(width: kS16),
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(f.title, style: Theme.of(context).textTheme.titleSmall),
+                      const SizedBox(height: kS4),
+                      Text(f.desc, style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  )),
+                ]),
+              ),
+            ),
+          ]),
+        ),
       );
 
   // ── PDF SECTION ──────────────────────────────────────────────────────────
@@ -582,13 +702,32 @@ class _LandingScreenState extends State<LandingScreen>
                       color: Colors.white.withValues(alpha: 0.8)),
                   textAlign: TextAlign.center),
               const SizedBox(height: kS24),
-              ElevatedButton(
-                onPressed: () => context.go('/login?mode=register'),
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white, foregroundColor: kAccent,
-                    minimumSize: const Size(0, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: kS32)),
-                child: const Text('Comença ara'),
+              AnimatedBuilder(
+                animation: _pulse,
+                builder: (_, child) {
+                  final blur = 8.0 + 12.0 * _pulse.value;
+                  return Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(kRadiusMd),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          blurRadius: blur,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: child,
+                  );
+                },
+                child: ElevatedButton(
+                  onPressed: () => context.go('/login?mode=register'),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white, foregroundColor: kAccent,
+                      minimumSize: const Size(0, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: kS32)),
+                  child: const Text('Comença ara'),
+                ),
               ),
             ]),
           ),
@@ -596,15 +735,26 @@ class _LandingScreenState extends State<LandingScreen>
       );
 
   // ── FOOTER ───────────────────────────────────────────────────────────────
-  Widget _buildFooter(BuildContext context) => Column(children: [
-        const Divider(color: kBorderSubtle),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: kS24),
-          child: Text("© ${DateTime.now().year} Entrevista't",
+  Widget _buildFooter(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: kPagePadding, vertical: kS16),
+        decoration: const BoxDecoration(
+          color: kBgSurface,
+          border: Border(top: BorderSide(color: kBorderSubtle)),
+        ),
+        child: Row(children: [
+          Image.asset('assets/images/logo_entrevistat.png',
+              width: 24, height: 24, fit: BoxFit.contain),
+          const SizedBox(width: kS8),
+          Text("Entrevista't",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: kTextSecondary, fontWeight: FontWeight.w600)),
+          const Spacer(),
+          Text("© ${DateTime.now().year} Entrevista't",
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: kTextDisabled)),
-        ),
-      ]);
+        ]),
+      );
 }
 
 // ── Data classes ───────────────────────────────────────────────────────────
@@ -617,4 +767,3 @@ class _Metric {
   final String label, value, desc; final IconData icon; final Color color;
   const _Metric(this.label, this.value, this.icon, this.color, this.desc);
 }
-

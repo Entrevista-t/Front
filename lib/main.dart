@@ -19,6 +19,20 @@ void main() {
 // Set to true to skip login (no API needed for UI review)
 const bool kDevBypassLogin = true;
 
+CustomTransitionPage<void> _fadePage(Widget child) {
+  return CustomTransitionPage<void>(
+    child: child,
+    transitionDuration: const Duration(milliseconds: 250),
+    reverseTransitionDuration: const Duration(milliseconds: 200),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: child,
+      );
+    },
+  );
+}
+
 final _router = GoRouter(
   initialLocation: '/landing',
   debugLogDiagnostics: true,
@@ -34,32 +48,32 @@ final _router = GoRouter(
     return null;
   },
   routes: [
-    GoRoute(path: '/landing', builder: (_, __) => const LandingScreen()),
+    GoRoute(path: '/landing', pageBuilder: (_, __) => _fadePage(const LandingScreen())),
     GoRoute(
       path: '/login',
-      builder: (_, state) {
+      pageBuilder: (_, state) {
         final mode = state.uri.queryParameters['mode'];
-        return LoginScreen(initialSignUp: mode == 'register');
+        return _fadePage(LoginScreen(initialSignUp: mode == 'register'));
       },
     ),
-    GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+    GoRoute(path: '/home', pageBuilder: (_, __) => _fadePage(const HomeScreen())),
     GoRoute(
       path: '/interview/:categoryId',
-      builder: (_, state) => InterviewScreen(
+      pageBuilder: (_, state) => _fadePage(InterviewScreen(
         categoryId: state.pathParameters['categoryId']!,
         categoryName: state.uri.queryParameters['name'],
-      ),
+      )),
     ),
     GoRoute(
       path: '/results/:sessionId',
-      builder: (_, state) => ResultsScreen(sessionId: state.pathParameters['sessionId']!),
+      pageBuilder: (_, state) => _fadePage(ResultsScreen(sessionId: state.pathParameters['sessionId']!)),
     ),
     GoRoute(
       path: '/report-sent/:sessionId',
-      builder: (_, state) => ReportSentScreen(sessionId: state.pathParameters['sessionId']!),
+      pageBuilder: (_, state) => _fadePage(ReportSentScreen(sessionId: state.pathParameters['sessionId']!)),
     ),
-    GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
-    GoRoute(path: '/profile/edit', builder: (_, __) => const EditProfileScreen()),
+    GoRoute(path: '/profile', pageBuilder: (_, __) => _fadePage(const ProfileScreen())),
+    GoRoute(path: '/profile/edit', pageBuilder: (_, __) => _fadePage(const EditProfileScreen())),
   ],
 );
 

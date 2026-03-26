@@ -17,15 +17,24 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen>
+    with TickerProviderStateMixin {
   List<InterviewSession> _sessions = [];
   bool _loading = true;
   String _name = 'Usuari';
   String _email = 'usuari@entrevistat.com';
 
+  late final AnimationController _statsCtrl;
+  late final AnimationController _listCtrl;
+
   @override
   void initState() {
     super.initState();
+    _statsCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _listCtrl = AnimationController(vsync: this);
     _load();
   }
 
@@ -42,6 +51,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // sense sessions
     } finally {
       setState(() { _loading = false; });
+      _statsCtrl.forward();
+      _listCtrl
+        ..duration = Duration(milliseconds: 600 + 100 * _sessions.length)
+        ..forward();
     }
   }
 
@@ -53,6 +66,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String get _bestCategory {
     if (_sessions.isEmpty) return '-';
     return _sessions.reduce((a, b) => a.overallScore > b.overallScore ? a : b).categoryName;
+  }
+
+  @override
+  void dispose() {
+    _statsCtrl.dispose();
+    _listCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -92,10 +112,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onButtonTap: () => context.go('/home'),
                   )
                 else
-                  ..._sessions.map((s) => SessionTile(
-                    session: s,
-                    onTap: () => context.go('/results/${s.id}'),
-                  )),
+                  ..._sessions.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final s = entry.value;
+                    final count = _sessions.length;
+                    final begin = count > 0 ? (i / (count + 1)) : 0.0;
+                    final end = count > 0 ? ((i + 1) / (count + 1)).clamp(0.0, 1.0) : 1.0;
+                    final interval = CurvedAnimation(
+                      parent: _listCtrl,
+                      curve: Interval(begin, end, curve: kCurveEntrance),
+                    );
+                    return FadeTransition(
+                      opacity: interval,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.15),
+                          end: Offset.zero,
+                        ).animate(interval),
+                        child: SessionTile(
+                          session: s,
+                          onTap: () => context.go('/results/${s.id}'),
+                        ),
+                      ),
+                    );
+                  }),
                 const SizedBox(height: kS24),
               ],
             ),
@@ -103,29 +143,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildUserCard() {
-    return AppCard(
-      color: kBgElevated,
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 36,
-            backgroundColor: kAccent.withValues(alpha: 0.15),
-            child: const Icon(Icons.person, color: kAccent, size: 38),
-          ),
-          const SizedBox(width: kS16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_name, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: kS4),
-                Text(_email, style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: kS12),
-                const AppChip('Pla gratuït'),
-              ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: kGradientCardBorder,
+        borderRadius: BorderRadius.circular(kRadiusMd),
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(1),
+        padding: const EdgeInsets.all(kS24),
+        decoration: BoxDecoration(
+          color: kBgElevated,
+          borderRadius: BorderRadius.circular(kRadiusMd),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 36,
+              backgroundColor: kAccent.withValues(alpha: 0.15),
+              child: const Icon(Icons.person, color: kAccent, size: 38),
             ),
-          ),
-        ],
+            const SizedBox(width: kS16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_name, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: kS4),
+                  Text(_email, style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: kS12),
+                  const AppChip('Pla gratuït'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -133,27 +184,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildStatsRow() {
     return Row(
       children: [
-        Expanded(child: _statCard('${_sessions.length}', 'Sessions', Icons.videocam_outlined)),
+        Expanded(child: _statCard('${_sessions.length}', 'Sessions', Icons.videocam_outlined, isNumeric: true)),
         const SizedBox(width: kS12),
-        Expanded(child: _statCard('${_avgScore.toInt()}%', 'Puntuació\nmitja', Icons.bar_chart_rounded)),
+        Expanded(child: _statCard('${_avgScore.toInt()}%', 'Puntuació\nmitja', Icons.bar_chart_rounded, isNumeric: true)),
         const SizedBox(width: kS12),
         Expanded(child: _statCard(_bestCategory, 'Millor\ncategoria', Icons.star_outline_rounded)),
       ],
     );
   }
 
-  Widget _statCard(String value, String label, IconData icon) {
+  Widget _statCard(String value, String label, IconData icon, {bool isNumeric = false}) {
     return AppCard(
       padding: const EdgeInsets.symmetric(vertical: kS16, horizontal: kS12),
       child: Column(
         children: [
           Icon(icon, color: kAccent, size: 20),
           const SizedBox(height: kS8),
-          Text(value,
-              style: Theme.of(context).textTheme.titleSmall,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center),
+          isNumeric
+              ? AnimatedBuilder(
+                  animation: _statsCtrl,
+                  builder: (_, __) {
+                    final numericPart = RegExp(r'\d+').firstMatch(value);
+                    if (numericPart == null) {
+                      return Text(value,
+                          style: Theme.of(context).textTheme.titleSmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center);
+                    }
+                    final target = int.parse(numericPart.group(0)!);
+                    final curvedProgress = kCurveEntrance.transform(_statsCtrl.value);
+                    final current = (target * curvedProgress).round();
+                    final display = value.replaceFirst(numericPart.group(0)!, '$current');
+                    return Text(display,
+                        style: Theme.of(context).textTheme.titleSmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center);
+                  },
+                )
+              : Text(value,
+                  style: Theme.of(context).textTheme.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center),
           const SizedBox(height: kS4),
           Text(label,
               style: Theme.of(context).textTheme.labelSmall,

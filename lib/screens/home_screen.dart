@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_section_header.dart';
+import '../widgets/glow_icon.dart';
 import '../widgets/session_tile.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,7 +16,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with TickerProviderStateMixin {
   static const _catDescriptions = {
     'software': 'Algorismes, arquitectura i sistemes',
     'data': 'Anàlisi de dades i machine learning',
@@ -30,16 +32,35 @@ class _HomeScreenState extends State<HomeScreen> {
   List<InterviewSession> _recentSessions = [];
   bool _loading = true;
   final _searchController = TextEditingController();
+  late final AnimationController _entranceCtrl;
+
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    final name = ApiService.devUserName ?? 'Usuari';
+    if (hour < 12) return 'Bon dia, $name';
+    if (hour < 20) return 'Bona tarda, $name';
+    return 'Bona nit, $name';
+  }
+
+  void _restartEntrance(int count) {
+    if (count == 0) return;
+    final totalMs = 150 * (count - 1) + 400;
+    _entranceCtrl.duration =
+        Duration(milliseconds: totalMs.clamp(400, 2000));
+    _entranceCtrl.forward(from: 0);
+  }
 
   @override
   void initState() {
     super.initState();
+    _entranceCtrl = AnimationController(vsync: this);
     _load();
     _searchController.addListener(_filterCategories);
   }
 
   @override
   void dispose() {
+    _entranceCtrl.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -57,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
             .toList();
       }
     });
+    _restartEntrance(_filteredCategories.length);
   }
 
   List<InterviewCategory> get _allCats =>
@@ -75,6 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _filteredCategories = _allCats;
         _loading = false;
       });
+      _restartEntrance(_filteredCategories.length);
     }
   }
 
@@ -94,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => context.go('/landing'),
             child: Image.asset(
               'assets/images/logo_entrevistat.png',
-              width: 28, height: 28,
+              width: 34, height: 34,
               fit: BoxFit.contain,
             ),
           ),
@@ -128,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
                     child: Column(children: [
                       Text(
-                        'Hola, ${ApiService.devUserName ?? "Usuari"}',
+                        _greeting,
                         style: Theme.of(context).textTheme.headlineMedium,
                         textAlign: TextAlign.center,
                       ),
@@ -234,63 +257,43 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    final totalMs = (150 * (cats.length - 1) + 400).clamp(400, 2000);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
-          child: Column(
-            children: cats.map((cat) {
-              final desc = _catDescriptions[cat.id] ?? '';
-              return Padding(
-                padding: const EdgeInsets.only(bottom: kS12),
-                child: Material(
-                  color: kBgSurface,
-                  borderRadius: BorderRadius.circular(kRadiusMd),
-                  elevation: 0,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(kRadiusMd),
-                    onTap: () => context.go('/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}'),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(kRadiusMd),
-                        border: Border.all(color: kBorderSubtle),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS12),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(kS8),
-                            decoration: BoxDecoration(
-                              color: kAccent.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(kRadiusSm),
-                            ),
-                            child: Icon(cat.icon, color: kAccent, size: 20),
+          child: AnimatedBuilder(
+            animation: _entranceCtrl,
+            builder: (context, _) {
+              return Column(
+                children: List.generate(cats.length, (i) {
+                  final cat = cats[i];
+                  final desc = _catDescriptions[cat.id] ?? '';
+                  final currentMs = _entranceCtrl.value * totalMs;
+                  final t = ((currentMs - 150.0 * i) / 400.0).clamp(0.0, 1.0);
+                  final val = kCurveEntrance.transform(t);
+
+                  return Opacity(
+                    opacity: val,
+                    child: Transform.translate(
+                      offset: Offset(0, 12.0 * (1.0 - val)),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: kS12),
+                        child: _CategoryCard(
+                          category: cat,
+                          description: desc,
+                          onTap: () => context.go(
+                            '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
                           ),
-                          const SizedBox(width: kS16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(cat.name,
-                                    style: Theme.of(context).textTheme.titleSmall),
-                                if (desc.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(desc,
-                                      style: Theme.of(context).textTheme.bodySmall),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: kS8),
-                          const Icon(Icons.chevron_right_rounded, color: kTextSecondary, size: 20),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                }),
               );
-            }).toList(),
+            },
           ),
         ),
       ),
@@ -304,9 +307,14 @@ class _HomeScreenState extends State<HomeScreen> {
         color: kBgSurface,
         borderRadius: BorderRadius.circular(kRadiusMd),
         border: Border.all(color: kBorderSubtle),
+        boxShadow: kShadowSm,
       ),
       child: Row(children: [
-        const Icon(Icons.bar_chart_rounded, color: kAccent, size: 20),
+        const GlowIcon(
+          icon: Icons.bar_chart_rounded,
+          size: 36,
+          iconSize: 20,
+        ),
         const SizedBox(width: kS12),
         Text('${_averageScore.toInt()}%',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(color: kAccent)),
@@ -324,6 +332,86 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+}
+
+// ── Category card with hover lift ───────────────────────────────────────────
+class _CategoryCard extends StatefulWidget {
+  final InterviewCategory category;
+  final String description;
+  final VoidCallback onTap;
+
+  const _CategoryCard({
+    required this.category,
+    required this.description,
+    required this.onTap,
+  });
+
+  @override
+  State<_CategoryCard> createState() => _CategoryCardState();
+}
+
+class _CategoryCardState extends State<_CategoryCard> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedContainer(
+        duration: kDurationFast,
+        curve: kCurveHover,
+        decoration: BoxDecoration(
+          color: kBgSurface,
+          borderRadius: BorderRadius.circular(kRadiusMd),
+          border: Border.all(
+            color: _hovering
+                ? kAccent.withValues(alpha: 0.3)
+                : kBorderSubtle,
+          ),
+          boxShadow: _hovering ? kShadowMd : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(kRadiusMd),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(kRadiusMd),
+            onTap: widget.onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: kS16,
+                vertical: kS12,
+              ),
+              child: Row(
+                children: [
+                  GlowIcon(icon: widget.category.icon, size: 36, iconSize: 20),
+                  const SizedBox(width: kS16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(widget.category.name,
+                            style: Theme.of(context).textTheme.titleSmall),
+                        if (widget.description.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(widget.description,
+                              style: Theme.of(context).textTheme.bodySmall),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: kS8),
+                  const Icon(Icons.chevron_right_rounded,
+                      color: kTextSecondary, size: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Profile avatar with hover animation + styled popup menu ────────────────

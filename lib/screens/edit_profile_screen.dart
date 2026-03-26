@@ -16,6 +16,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _emailController = TextEditingController();
   bool _loading = false;
   bool _saved = false;
+  bool _hoverSave = false;
+  bool _hoverCamera = false;
 
   @override
   void initState() {
@@ -72,14 +74,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 Positioned(
                   bottom: 0, right: 0,
-                  child: Container(
-                    width: 32, height: 32,
-                    decoration: BoxDecoration(
-                      color: kAccent,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: kBgBase, width: 2),
+                  child: MouseRegion(
+                    onEnter: (_) => setState(() => _hoverCamera = true),
+                    onExit: (_) => setState(() => _hoverCamera = false),
+                    cursor: SystemMouseCursors.click,
+                    child: AnimatedScale(
+                      scale: _hoverCamera ? 1.15 : 1.0,
+                      duration: kDurationFast,
+                      curve: kCurveHover,
+                      child: Container(
+                        width: 32, height: 32,
+                        decoration: BoxDecoration(
+                          color: kAccent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: kBgBase, width: 2),
+                        ),
+                        child: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 16),
+                      ),
                     ),
-                    child: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 16),
                   ),
                 ),
               ],
@@ -90,15 +102,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             _buildField(context, 'Correu electrònic', _emailController, Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress),
             const SizedBox(height: kS32),
-            ElevatedButton.icon(
-              onPressed: _loading ? null : _save,
-              icon: _loading
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Icon(_saved ? Icons.check_rounded : Icons.save_outlined, size: 18),
-              label: Text(_saved ? 'Guardat!' : 'Guardar canvis'),
-              style: _saved
-                  ? ElevatedButton.styleFrom(backgroundColor: kScoreGood)
-                  : null,
+            MouseRegion(
+              onEnter: (_) => setState(() => _hoverSave = true),
+              onExit: (_) => setState(() => _hoverSave = false),
+              child: AnimatedContainer(
+                duration: kDurationFast,
+                curve: kCurveHover,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(kRadiusMd),
+                  boxShadow: _hoverSave ? kShadowGlow : [],
+                ),
+                child: ElevatedButton.icon(
+                  onPressed: _loading ? null : _save,
+                  icon: _loading
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Icon(_saved ? Icons.check_rounded : Icons.save_outlined, size: 18),
+                  label: Text(_saved ? 'Guardat!' : 'Guardar canvis'),
+                  style: _saved
+                      ? ElevatedButton.styleFrom(backgroundColor: kScoreGood)
+                      : null,
+                ),
+              ),
             ),
             const SizedBox(height: kS12),
             TextButton(

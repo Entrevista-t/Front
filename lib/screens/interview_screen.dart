@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -23,7 +24,8 @@ class InterviewScreen extends StatefulWidget {
   State<InterviewScreen> createState() => _InterviewScreenState();
 }
 
-class _InterviewScreenState extends State<InterviewScreen> {
+class _InterviewScreenState extends State<InterviewScreen>
+    with TickerProviderStateMixin {
   CameraController? _camera;
   Question? _question;
   bool _recording = false;
@@ -33,6 +35,11 @@ class _InterviewScreenState extends State<InterviewScreen> {
   String? _error;
   Duration _elapsed = Duration.zero;
   Timer? _timer;
+
+  // Animation controllers
+  late final AnimationController _borderPulseCtrl;
+  late final AnimationController _dotPulseCtrl;
+  late final AnimationController _ringPulseCtrl;
 
   String get _displayName =>
       widget.categoryName ?? widget.categoryId;
@@ -47,6 +54,22 @@ class _InterviewScreenState extends State<InterviewScreen> {
   @override
   void initState() {
     super.initState();
+
+    _borderPulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+
+    _dotPulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+
+    _ringPulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+
     _init();
   }
 
@@ -137,6 +160,9 @@ class _InterviewScreenState extends State<InterviewScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _borderPulseCtrl.dispose();
+    _dotPulseCtrl.dispose();
+    _ringPulseCtrl.dispose();
     _camera?.dispose();
     super.dispose();
   }
@@ -167,18 +193,26 @@ class _InterviewScreenState extends State<InterviewScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Question (prominent, centered) ─────────────────────────
+                // ── Question (prominent, centered, card treatment) ───────
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 600),
-                    child: Text(
-                      question.text,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 24,
+                    child: Container(
+                      padding: const EdgeInsets.all(kS24),
+                      decoration: BoxDecoration(
+                        color: kBgSurface,
+                        borderRadius: BorderRadius.circular(kRadiusMd),
+                        border: Border.all(color: kBorderSubtle),
                       ),
-                      textAlign: TextAlign.center,
+                      child: Text(
+                        question.text,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 24,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
                 ),
@@ -191,67 +225,85 @@ class _InterviewScreenState extends State<InterviewScreen> {
                     constraints: const BoxConstraints(maxWidth: 560),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                      child: AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(kRadiusMd),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Container(
-                                color: kBgElevated,
-                                child: (_camera != null && _camera!.value.isInitialized)
-                                    ? CameraPreview(_camera!)
-                                    : _buildNoCameraPlaceholder(),
+                      child: AnimatedBuilder(
+                        animation: _borderPulseCtrl,
+                        builder: (context, child) {
+                          final borderColor = _recording
+                              ? Color.lerp(
+                                  kErrorRed.withValues(alpha: 0.3),
+                                  kErrorRed,
+                                  _borderPulseCtrl.value,
+                                )!
+                              : kBorderSubtle;
+                          return Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(kRadiusMd + 3),
+                              border: Border.all(
+                                color: borderColor,
+                                width: _recording ? 3.0 : 1.0,
                               ),
+                            ),
+                            child: child,
+                          );
+                        },
+                        child: AspectRatio(
+                          aspectRatio: 16 / 9,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(kRadiusMd),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Container(
+                                  color: kBgElevated,
+                                  child: (_camera != null && _camera!.value.isInitialized)
+                                      ? CameraPreview(_camera!)
+                                      : _buildNoCameraPlaceholder(),
+                                ),
 
-                              // Info overlay (fades out on record)
-                              AnimatedOpacity(
-                                opacity: _recording ? 0.0 : 1.0,
-                                duration: const Duration(milliseconds: 400),
-                                curve: Curves.easeOut,
-                                child: IgnorePointer(
-                                  ignoring: _recording,
-                                  child: Container(
-                                    color: kBgBase.withValues(alpha: 0.88),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: kS24, vertical: kS16),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.info_outline_rounded,
-                                            color: kAccentSky, size: 24),
-                                        const SizedBox(height: kS12),
-                                        ..._infoBullets.map((text) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 6),
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                // Info overlay with frosted glass (fades out on record)
+                                AnimatedOpacity(
+                                  opacity: _recording ? 0.0 : 1.0,
+                                  duration: const Duration(milliseconds: 400),
+                                  curve: Curves.easeOut,
+                                  child: IgnorePointer(
+                                    ignoring: _recording,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(kRadiusMd),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                                        child: Container(
+                                          color: kBgBase.withValues(alpha: 0.88),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: kS32, vertical: kS24),
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            crossAxisAlignment: CrossAxisAlignment.center,
                                             children: [
-                                              Padding(
-                                                padding: const EdgeInsets.only(top: 4),
-                                                child: Icon(Icons.circle,
-                                                    size: 4, color: kAccentSky),
-                                              ),
-                                              const SizedBox(width: kS8),
-                                              Expanded(
+                                              Icon(Icons.info_outline_rounded,
+                                                  color: kAccentSky, size: 28),
+                                              const SizedBox(height: kS16),
+                                              ..._infoBullets.map((text) => Padding(
+                                                padding: const EdgeInsets.only(bottom: kS12),
                                                 child: Text(text,
+                                                  textAlign: TextAlign.center,
                                                   style: Theme.of(context)
-                                                      .textTheme.bodySmall?.copyWith(
+                                                      .textTheme.bodyMedium?.copyWith(
                                                     color: kAccentSky,
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 15,
                                                     height: 1.4,
-                                                    fontSize: 12,
                                                   ),
                                                 ),
-                                              ),
+                                              )),
                                             ],
                                           ),
-                                        )),
-                                      ],
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -265,6 +317,23 @@ class _InterviewScreenState extends State<InterviewScreen> {
                 if (_recording) Center(child: _buildTimerBadge()),
 
                 if (_recording) ...[
+                  const SizedBox(height: kS8),
+                  // ── Progress bar (60s) ───────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(kRadiusMd),
+                        child: LinearProgressIndicator(
+                          value: (_elapsed.inSeconds / 60).clamp(0.0, 1.0),
+                          minHeight: 4,
+                          color: kAccent,
+                          backgroundColor: kBorderSubtle,
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: kS8),
                   Text(
                     'Prem el botó per aturar i enviar',
@@ -290,7 +359,16 @@ class _InterviewScreenState extends State<InterviewScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.circle, color: kErrorRed, size: 8),
+        AnimatedBuilder(
+          animation: _dotPulseCtrl,
+          builder: (context, child) {
+            return Opacity(
+              opacity: 0.3 + 0.7 * _dotPulseCtrl.value,
+              child: child,
+            );
+          },
+          child: const Icon(Icons.circle, color: kErrorRed, size: 8),
+        ),
         const SizedBox(width: kS6),
         Text(
           _elapsedFormatted,
@@ -306,28 +384,60 @@ class _InterviewScreenState extends State<InterviewScreen> {
   }
 
   Widget _buildRecordButton() {
-    return GestureDetector(
-      onTap: _recording ? _stopAndSubmit : _startRecording,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 72,
-        height: 72,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: _recording ? kErrorRed : kAccent,
-          boxShadow: [
-            BoxShadow(
-              color: (_recording ? kErrorRed : kAccent).withValues(alpha: 0.35),
-              blurRadius: 16,
-              spreadRadius: 2,
+    return SizedBox(
+      width: 120,
+      height: 120,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Pulsing ring when idle
+          if (!_recording)
+            AnimatedBuilder(
+              animation: _ringPulseCtrl,
+              builder: (context, _) {
+                final scale = 1.0 + 0.5 * _ringPulseCtrl.value;
+                final opacity = 1.0 - _ringPulseCtrl.value;
+                return Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: kAccent.withValues(alpha: opacity * 0.5),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
-        child: Icon(
-          _recording ? Icons.stop_rounded : Icons.fiber_manual_record_rounded,
-          color: Colors.white,
-          size: 32,
-        ),
+          GestureDetector(
+            onTap: _recording ? _stopAndSubmit : _startRecording,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _recording ? kErrorRed : kAccent,
+                boxShadow: [
+                  BoxShadow(
+                    color: (_recording ? kErrorRed : kAccent).withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Icon(
+                _recording ? Icons.stop_rounded : Icons.fiber_manual_record_rounded,
+                color: Colors.white,
+                size: 32,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -360,20 +470,39 @@ class _InterviewScreenState extends State<InterviewScreen> {
   }
 
   Widget _buildUploading() {
-    return const Scaffold(
+    const steps = [
+      '1. Pujant vídeo...',
+      '2. Analitzant amb IA...',
+      '3. Generant informe...',
+    ];
+    return Scaffold(
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: kS24),
-            Text('Processant resposta...'),
-            SizedBox(height: kS8),
-            Text(
-              "El servidor analitza el vídeo i l'àudio amb IA.\nAixò pot trigar uns segons.",
-              textAlign: TextAlign.center,
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(kS24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: kS24),
+              Text(
+                'Processant resposta...',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: kTextPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: kS16),
+              ...steps.map((step) => Padding(
+                padding: const EdgeInsets.only(bottom: kS4),
+                child: Text(
+                  step,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: kTextSecondary,
+                  ),
+                ),
+              )),
+            ],
+          ),
         ),
       ),
     );

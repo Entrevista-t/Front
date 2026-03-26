@@ -28,6 +28,31 @@ const kScoreMid = Color(0xFFF59E0B); // score 50–74
 const kScoreLow = Color(0xFFEF4444); // score < 50
 const kErrorRed = Color(0xFFEF4444);
 
+// ── Gradient presets ─────────────────────────────────────────────────────────
+const kGradientAccent = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+);
+
+const kGradientAccentSubtle = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0x186366F1), Color(0x188B5CF6)],
+);
+
+const kGradientSurface = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0xFF1A1F35), Color(0xFF161B2E)],
+);
+
+const kGradientCardBorder = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Color(0x406366F1), Color(0x108B5CF6)],
+);
+
 // ── Helper ───────────────────────────────────────────────────────────────────
 
 /// Returns the semantic score colour based on a 0–100 value.

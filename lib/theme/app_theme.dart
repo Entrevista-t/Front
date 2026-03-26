@@ -25,15 +25,15 @@ class AppTheme {
     final textTheme = GoogleFonts.interTextTheme(base.textTheme).copyWith(
       displayLarge: GoogleFonts.inter(
         fontSize: 32, fontWeight: FontWeight.w700,
-        color: kTextPrimary, letterSpacing: -0.5,
+        color: kTextPrimary, letterSpacing: -0.5, height: 1.2,
       ),
       headlineMedium: GoogleFonts.inter(
         fontSize: 22, fontWeight: FontWeight.w700,
-        color: kTextPrimary, letterSpacing: -0.3,
+        color: kTextPrimary, letterSpacing: -0.3, height: 1.3,
       ),
       headlineSmall: GoogleFonts.inter(
         fontSize: 18, fontWeight: FontWeight.w600,
-        color: kTextPrimary,
+        color: kTextPrimary, height: 1.3,
       ),
       titleMedium: GoogleFonts.inter(
         fontSize: 16, fontWeight: FontWeight.w600,
@@ -45,15 +45,15 @@ class AppTheme {
       ),
       bodyLarge: GoogleFonts.inter(
         fontSize: 15, fontWeight: FontWeight.w400,
-        color: kTextPrimary,
+        color: kTextPrimary, height: 1.5,
       ),
       bodyMedium: GoogleFonts.inter(
         fontSize: 14, fontWeight: FontWeight.w400,
-        color: kTextPrimary,
+        color: kTextPrimary, height: 1.5,
       ),
       bodySmall: GoogleFonts.inter(
         fontSize: 13, fontWeight: FontWeight.w400,
-        color: kTextSecondary,
+        color: kTextSecondary, height: 1.5,
       ),
       labelLarge: GoogleFonts.inter(
         fontSize: 14, fontWeight: FontWeight.w600,
@@ -63,6 +63,10 @@ class AppTheme {
         fontSize: 11, fontWeight: FontWeight.w500,
         color: kTextSecondary, letterSpacing: 0.4,
       ),
+    );
+
+    final buttonShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(kRadiusMd),
     );
 
     return base.copyWith(
@@ -109,9 +113,30 @@ class AppTheme {
           disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
           elevation: 0,
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(kRadiusMd),
+          shape: buttonShape,
+          textStyle: GoogleFonts.inter(
+            fontSize: 15, fontWeight: FontWeight.w600,
           ),
+        ).copyWith(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return Colors.white.withValues(alpha: 0.1);
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return Colors.white.withValues(alpha: 0.15);
+            }
+            return null;
+          }),
+        ),
+      ),
+
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: kAccent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          minimumSize: const Size(double.infinity, 48),
+          shape: buttonShape,
           textStyle: GoogleFonts.inter(
             fontSize: 15, fontWeight: FontWeight.w600,
           ),
@@ -123,12 +148,26 @@ class AppTheme {
           foregroundColor: kTextPrimary,
           side: const BorderSide(color: kBorderSubtle),
           minimumSize: const Size(double.infinity, 48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(kRadiusMd),
-          ),
+          shape: buttonShape,
           textStyle: GoogleFonts.inter(
             fontSize: 15, fontWeight: FontWeight.w600,
           ),
+        ).copyWith(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return kAccent.withValues(alpha: 0.08);
+            }
+            if (states.contains(WidgetState.pressed)) {
+              return kAccent.withValues(alpha: 0.12);
+            }
+            return null;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return BorderSide(color: kAccent.withValues(alpha: 0.5));
+            }
+            return const BorderSide(color: kBorderSubtle);
+          }),
         ),
       ),
 
@@ -138,6 +177,13 @@ class AppTheme {
           textStyle: GoogleFonts.inter(
             fontSize: 14, fontWeight: FontWeight.w600,
           ),
+        ).copyWith(
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return kAccent.withValues(alpha: 0.08);
+            }
+            return null;
+          }),
         ),
       ),
 
@@ -213,6 +259,17 @@ class AppTheme {
       iconTheme: const IconThemeData(
         color: kTextSecondary,
         size: 20,
+      ),
+
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: kBgElevated,
+          borderRadius: BorderRadius.circular(kRadiusSm),
+          border: Border.all(color: kBorderSubtle),
+        ),
+        textStyle: GoogleFonts.inter(
+          color: kTextPrimary, fontSize: 12,
+        ),
       ),
     );
   }

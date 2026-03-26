@@ -114,48 +114,79 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildBrandingPanel(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: kBgBase,
-        border: Border(right: BorderSide(color: kBorderSubtle)),
-      ),
-      padding: const EdgeInsets.all(40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Image.asset(
-                'assets/images/logo_entrevistat.png',
-                width: 36, height: 36,
-                fit: BoxFit.contain,
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: kBgBase,
+            border: Border(right: BorderSide(color: kBorderSubtle)),
+          ),
+        ),
+        // Decorative gradient orb
+        Positioned(
+          top: -40,
+          right: -40,
+          child: Container(
+            width: 200,
+            height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  kAccent.withValues(alpha: 0.08),
+                  Colors.transparent,
+                ],
               ),
-              const SizedBox(width: kS12),
-              Text("Entrevista't",
-                style: Theme.of(context).textTheme.titleMedium),
+              boxShadow: [
+                BoxShadow(
+                  color: kAccent.withValues(alpha: 0.06),
+                  blurRadius: 60,
+                  spreadRadius: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  Image.asset(
+                    'assets/images/logo_entrevistat.png',
+                    width: 40, height: 40,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(width: kS12),
+                  Text("Entrevista't",
+                    style: Theme.of(context).textTheme.titleMedium),
+                ],
+              ),
+              const SizedBox(height: kS32),
+              Text(
+                'Domina les teves\nentrevistes amb IA',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: kS12),
+              Text(
+                'Practica entrevistes simulades i rep feedback\npersonalitzat per millorar cada vegada.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.6),
+              ),
+              const SizedBox(height: kS32),
+              _brandingFeature(context, Icons.visibility_outlined, 'Eye Tracking en temps real'),
+              const SizedBox(height: kS12),
+              _brandingFeature(context, Icons.graphic_eq_rounded, 'Anàlisi de veu amb IA'),
+              const SizedBox(height: kS12),
+              _brandingFeature(context, Icons.auto_awesome_rounded, 'Feedback personalitzat'),
+              const SizedBox(height: kS12),
+              _brandingFeature(context, Icons.picture_as_pdf_outlined, 'Informe PDF detallat'),
             ],
           ),
-          const SizedBox(height: kS32),
-          Text(
-            'Domina les teves\nentrevistes amb IA',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: kS12),
-          Text(
-            'Practica entrevistes simulades i rep feedback\npersonalitzat per millorar cada vegada.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.6),
-          ),
-          const SizedBox(height: kS32),
-          _brandingFeature(context, Icons.visibility_outlined, 'Eye Tracking en temps real'),
-          const SizedBox(height: kS12),
-          _brandingFeature(context, Icons.graphic_eq_rounded, 'Anàlisi de veu amb IA'),
-          const SizedBox(height: kS12),
-          _brandingFeature(context, Icons.auto_awesome_rounded, 'Feedback personalitzat'),
-          const SizedBox(height: kS12),
-          _brandingFeature(context, Icons.picture_as_pdf_outlined, 'Informe PDF detallat'),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -192,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Image.asset(
                     'assets/images/logo_entrevistat.png',
-                    width: 30, height: 30,
+                    width: 34, height: 34,
                     fit: BoxFit.contain,
                   ),
                   const SizedBox(width: kS8),
@@ -304,6 +335,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: 20, height: 20,
                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
               : Text(_isSignIn ? 'Iniciar sessió' : 'Crear compte'),
+        ),
+        const SizedBox(height: kS16),
+
+        Row(
+          children: [
+            const Expanded(child: Divider(color: kTextDisabled, thickness: 0.5)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: kS12),
+              child: Text('o',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: kTextDisabled)),
+            ),
+            const Expanded(child: Divider(color: kTextDisabled, thickness: 0.5)),
+          ],
         ),
         const SizedBox(height: kS16),
 
