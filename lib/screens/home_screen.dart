@@ -20,7 +20,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<InterviewCategory> _categories = [];
   List<InterviewSession> _recentSessions = [];
   bool _loading = true;
-  int _selectedDrawerIndex = 0;
 
   @override
   void initState() {
@@ -205,15 +204,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
             const SizedBox(height: 8),
-            _drawerItem(Icons.home_rounded, 'Home', 0, context,
+            _drawerItem(Icons.home_rounded, 'Home', context,
                 onTap: () { Navigator.pop(context); context.go('/home'); }),
-            _drawerItem(Icons.person_outline_rounded, 'Perfil', 1, context,
+            _drawerItem(Icons.person_outline_rounded, 'Perfil', context,
                 onTap: () { Navigator.pop(context); context.go('/profile'); }),
-            _drawerItem(Icons.bar_chart_rounded, 'Informes', 2, context,
+            _drawerItem(Icons.bar_chart_rounded, 'Informes', context,
                 onTap: () { Navigator.pop(context); context.go('/profile'); }),
             const Spacer(),
             Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
-            _drawerItem(Icons.edit_outlined, 'Editar perfil', 3, context,
+            _drawerItem(Icons.edit_outlined, 'Editar perfil', context,
                 onTap: () { Navigator.pop(context); context.go('/profile/edit'); }),
             const SizedBox(height: 12),
             Padding(
@@ -234,25 +233,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _drawerItem(IconData icon, String label, int index, BuildContext context,
+  Widget _drawerItem(IconData icon, String label, BuildContext context,
       {VoidCallback? onTap}) {
-    final selected = _selectedDrawerIndex == index;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       child: ListTile(
-        leading: Icon(icon, color: selected ? _green : _textMuted),
+        leading: Icon(icon, color: _textMuted),
         title: Text(label,
-            style: TextStyle(
-              color: selected ? _green : _textMuted,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-            )),
-        trailing: Icon(Icons.chevron_right, color: selected ? _green : _textMuted, size: 20),
-        tileColor: selected ? _green.withValues(alpha: 0.1) : null,
+            style: const TextStyle(color: _textMuted)),
+        trailing: const Icon(Icons.chevron_right, color: _textMuted, size: 20),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        onTap: onTap ?? () {
-          setState(() { _selectedDrawerIndex = index; });
-          Navigator.pop(context);
-        },
+        onTap: onTap ?? () => Navigator.pop(context),
       ),
     );
   }
