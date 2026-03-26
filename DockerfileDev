@@ -22,5 +22,5 @@ EXPOSE 8080
 # Definir la variable de entorno para la URL de la API (placeholder)
 ENV API_URL=http://localhost:5000
 
-# Comando de arranque
-CMD flutter run -d web-server --web-port 8080 --web-hostname 0.0.0.0 --dart-define=API_URL=$API_URL
+# Comando de arranque — pub get first to pick up any dependency changes
+CMD flutter pub get && flutter run -d web-server --web-port 8080 --web-hostname 0.0.0.0 --dart-define=API_URL=$API_URL

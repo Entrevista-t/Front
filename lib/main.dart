@@ -9,19 +9,28 @@ import 'screens/profile_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/report_sent_screen.dart';
 import 'services/api_service.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const EntrevistatApp());
 }
 
+// Set to true to skip login (no API needed for UI review)
+const bool kDevBypassLogin = true;
+
 final _router = GoRouter(
-  initialLocation: '/login',
+  initialLocation: '/landing',
   debugLogDiagnostics: true,
   redirect: (context, state) async {
-    final loggedIn = await ApiService.isLoggedIn();
     final path = state.uri.path;
-    if (path == '/' ) return loggedIn ? '/home' : '/login';
+    if (kDevBypassLogin) {
+      // When bypassing auth, redirect bare root to landing
+      if (path == '/') return '/landing';
+      return null;
+    }
+    final loggedIn = await ApiService.isLoggedIn();
+    if (path == '/') return loggedIn ? '/home' : '/login';
     return null;
   },
   routes: [
@@ -36,7 +45,10 @@ final _router = GoRouter(
     GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
     GoRoute(
       path: '/interview/:categoryId',
-      builder: (_, state) => InterviewScreen(categoryId: state.pathParameters['categoryId']!),
+      builder: (_, state) => InterviewScreen(
+        categoryId: state.pathParameters['categoryId']!,
+        categoryName: state.uri.queryParameters['name'],
+      ),
     ),
     GoRoute(
       path: '/results/:sessionId',
@@ -59,14 +71,7 @@ class EntrevistatApp extends StatelessWidget {
     return MaterialApp.router(
       title: "Entrevista't",
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00D4A1),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFF0F1117),
-      ),
+      theme: AppTheme.dark(),
       routerConfig: _router,
     );
   }

@@ -5,11 +5,19 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+
 
 class InterviewScreen extends StatefulWidget {
   final String categoryId;
+  final String? categoryName;
 
-  const InterviewScreen({super.key, required this.categoryId});
+  const InterviewScreen({
+    super.key,
+    required this.categoryId,
+    this.categoryName,
+  });
 
   @override
   State<InterviewScreen> createState() => _InterviewScreenState();
@@ -17,8 +25,7 @@ class InterviewScreen extends StatefulWidget {
 
 class _InterviewScreenState extends State<InterviewScreen> {
   CameraController? _camera;
-  List<Question> _questions = [];
-  int _currentIndex = 0;
+  Question? _question;
   bool _recording = false;
   bool _loading = true;
   bool _uploading = false;
@@ -26,6 +33,16 @@ class _InterviewScreenState extends State<InterviewScreen> {
   String? _error;
   Duration _elapsed = Duration.zero;
   Timer? _timer;
+
+  String get _displayName =>
+      widget.categoryName ?? widget.categoryId;
+
+  static const _infoBullets = [
+    'Mantén la calma i respon amb naturalitat.',
+    'Intenta parlar durant aproximadament un minut.',
+    "Situa't en un lloc ben il·luminat.",
+    'No surtis del marc de la càmera, podria afectar la teva avaluació.',
+  ];
 
   @override
   void initState() {
@@ -35,7 +52,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
 
   Future<void> _init() async {
     await _requestPermissions();
-    await _loadQuestions();
+    await _loadQuestion();
     await _initCamera();
   }
 
@@ -46,12 +63,14 @@ class _InterviewScreenState extends State<InterviewScreen> {
     });
   }
 
-  Future<void> _loadQuestions() async {
+  Future<void> _loadQuestion() async {
     try {
-      final q = await ApiService.getQuestions(widget.categoryId);
-      setState(() { _questions = q; });
+      final questions = await ApiService.getQuestions(widget.categoryId);
+      setState(() {
+        _question = questions.isNotEmpty ? questions.first : Question.fallback().first;
+      });
     } catch (_) {
-      setState(() { _questions = Question.fallback(); });
+      setState(() { _question = Question.fallback().first; });
     }
   }
 
@@ -100,24 +119,12 @@ class _InterviewScreenState extends State<InterviewScreen> {
       final file = await _camera!.stopVideoRecording();
       final sessionId = await ApiService.submitInterview(
         categoryId: widget.categoryId,
-        questionId: _questions[_currentIndex].id,
+        questionId: _question!.id,
         videoPath: file.path,
       );
       if (mounted) context.go('/report-sent/$sessionId');
     } catch (e) {
       setState(() { _uploading = false; _error = 'Error en enviar la gravació: $e'; });
-    }
-  }
-
-  void _nextQuestion() {
-    if (_currentIndex < _questions.length - 1) {
-      setState(() { _currentIndex++; });
-    }
-  }
-
-  void _prevQuestion() {
-    if (_currentIndex > 0) {
-      setState(() { _currentIndex--; });
     }
   }
 
@@ -136,196 +143,218 @@ class _InterviewScreenState extends State<InterviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Inicialitzant càmera...'),
-          ],
-        )),
-      );
-    }
+    if (_loading) return _buildLoading();
     if (_uploading) return _buildUploading();
     if (!_permissionsGranted) return _buildPermissionsError();
     if (_error != null) return _buildError();
 
-    final question = _questions.isEmpty ? Question.fallback().first : _questions[_currentIndex];
+    final question = _question ?? Question.fallback().first;
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Camera preview
-          if (_camera != null && _camera!.value.isInitialized)
-            CameraPreview(_camera!),
-
-          // Top bar
-          Positioned(
-            top: 0, left: 0, right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: _recording ? null : () => context.go('/home'),
-                    ),
-                    if (_recording)
-                      _buildRecordingBadge()
-                    else
-                      const SizedBox(width: 48),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(20),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: _recording ? null : () => context.go('/home'),
+          color: _recording ? kTextDisabled : null,
+        ),
+        title: Text(_displayName),
+        actions: const [],
+      ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(vertical: kS24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Question (prominent, centered) ─────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: Text(
+                      question.text,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 24,
                       ),
-                      child: Text(
-                        '${_currentIndex + 1} / ${_questions.length}',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ),
 
-          // Question card
-          Positioned(
-            left: 16, right: 16, top: 110,
-            child: _buildQuestionCard(question),
-          ),
+                const SizedBox(height: kS24),
 
-          // Bottom controls
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Previous question (only when not recording)
-                    IconButton(
-                      icon: Icon(
-                        Icons.skip_previous_rounded,
-                        color: (!_recording && _currentIndex > 0) ? Colors.white : Colors.white30,
-                        size: 36,
-                      ),
-                      onPressed: (!_recording && _currentIndex > 0) ? _prevQuestion : null,
-                    ),
+                // ── Camera preview with overlaid info ──────────────────────
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(kRadiusMd),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Container(
+                                color: kBgElevated,
+                                child: (_camera != null && _camera!.value.isInitialized)
+                                    ? CameraPreview(_camera!)
+                                    : _buildNoCameraPlaceholder(),
+                              ),
 
-                    // Record / Stop button
-                    GestureDetector(
-                      onTap: _recording ? _stopAndSubmit : _startRecording,
-                      child: Container(
-                        width: 76, height: 76,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _recording ? Colors.red : Colors.white,
-                          border: Border.all(color: Colors.white, width: 4),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8)],
+                              // Info overlay (fades out on record)
+                              AnimatedOpacity(
+                                opacity: _recording ? 0.0 : 1.0,
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeOut,
+                                child: IgnorePointer(
+                                  ignoring: _recording,
+                                  child: Container(
+                                    color: kBgBase.withValues(alpha: 0.88),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: kS24, vertical: kS16),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.info_outline_rounded,
+                                            color: kAccentSky, size: 24),
+                                        const SizedBox(height: kS12),
+                                        ..._infoBullets.map((text) => Padding(
+                                          padding: const EdgeInsets.only(bottom: 6),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 4),
+                                                child: Icon(Icons.circle,
+                                                    size: 4, color: kAccentSky),
+                                              ),
+                                              const SizedBox(width: kS8),
+                                              Expanded(
+                                                child: Text(text,
+                                                  style: Theme.of(context)
+                                                      .textTheme.bodySmall?.copyWith(
+                                                    color: kAccentSky,
+                                                    height: 1.4,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Icon(
-                          _recording ? Icons.stop_rounded : Icons.fiber_manual_record_rounded,
-                          color: _recording ? Colors.white : Colors.red,
-                          size: 38,
-                        ),
                       ),
                     ),
-
-                    // Next question (only when not recording)
-                    IconButton(
-                      icon: Icon(
-                        Icons.skip_next_rounded,
-                        color: (!_recording && _currentIndex < _questions.length - 1) ? Colors.white : Colors.white30,
-                        size: 36,
-                      ),
-                      onPressed: (!_recording && _currentIndex < _questions.length - 1) ? _nextQuestion : null,
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+
+                const SizedBox(height: kS8),
+
+                // ── Timer (below camera) ─────────────────────────────────
+                if (_recording) Center(child: _buildTimerBadge()),
+
+                if (_recording) ...[
+                  const SizedBox(height: kS8),
+                  Text(
+                    'Prem el botó per aturar i enviar',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: kErrorRed),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+
+                const SizedBox(height: kS16),
+
+                // ── Record button ────────────────────────────────────────
+                Center(child: _buildRecordButton()),
+              ],
             ),
           ),
-
-          // Hint when not recording
-          if (!_recording)
-            Positioned(
-              bottom: 110, left: 0, right: 0,
-              child: Center(
-                child: Text(
-                  'Prem el botó vermell per iniciar la gravació',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
-                ),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildRecordingBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.circle, color: Colors.white, size: 9),
-          const SizedBox(width: 6),
-          Text(
-            'REC  $_elapsedFormatted',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+  Widget _buildTimerBadge() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.circle, color: kErrorRed, size: 8),
+        const SizedBox(width: kS6),
+        Text(
+          _elapsedFormatted,
+          style: const TextStyle(
+            color: kErrorRed,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            fontFeatures: [FontFeature.tabularFigures()],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecordButton() {
+    return GestureDetector(
+      onTap: _recording ? _stopAndSubmit : _startRecording,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: _recording ? kErrorRed : kAccent,
+          boxShadow: [
+            BoxShadow(
+              color: (_recording ? kErrorRed : kAccent).withValues(alpha: 0.35),
+              blurRadius: 16,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Icon(
+          _recording ? Icons.stop_rounded : Icons.fiber_manual_record_rounded,
+          color: Colors.white,
+          size: 32,
+        ),
       ),
     );
   }
 
-  Widget _buildQuestionCard(Question question) {
-    final blue = Theme.of(context).colorScheme.primary;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.93),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 12)],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  question.category.toUpperCase(),
-                  style: TextStyle(color: blue, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            question.text,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.3),
-          ),
-        ],
+  Widget _buildNoCameraPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Icon(Icons.videocam_off_outlined, size: 40, color: kTextSecondary),
+        const SizedBox(height: kS8),
+        Text('Càmera no disponible',
+            style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+
+  Widget _buildLoading() {
+    return const Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: kS16),
+            Text('Inicialitzant càmera...'),
+          ],
+        ),
       ),
     );
   }
@@ -337,13 +366,12 @@ class _InterviewScreenState extends State<InterviewScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(),
-            SizedBox(height: 20),
-            Text('Processant resposta...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-            SizedBox(height: 8),
+            SizedBox(height: kS24),
+            Text('Processant resposta...'),
+            SizedBox(height: kS8),
             Text(
-              'El servidor analitza el vídeo i l\'àudio amb IA.\nAixò pot trigar uns segons.',
+              "El servidor analitza el vídeo i l'àudio amb IA.\nAixò pot trigar uns segons.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
             ),
           ],
         ),
@@ -356,24 +384,22 @@ class _InterviewScreenState extends State<InterviewScreen> {
       appBar: AppBar(title: const Text('Entrevista')),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(kS24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.no_photography_rounded, size: 72, color: Colors.grey),
-              const SizedBox(height: 20),
+              const Icon(Icons.no_photography_rounded, size: 72, color: kTextSecondary),
+              const SizedBox(height: kS24),
               const Text(
                 'Cal accés a la càmera i el micròfon',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: kS8),
               const Text(
-                'Atorga els permisos necessaris per poder\nenregistrar la simulació d\'entrevista.',
+                "Atorga els permisos necessaris per poder\nenregistrar la simulació d'entrevista.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: kS24),
               FilledButton.icon(
                 onPressed: openAppSettings,
                 icon: const Icon(Icons.settings),
@@ -391,18 +417,18 @@ class _InterviewScreenState extends State<InterviewScreen> {
       appBar: AppBar(title: const Text('Entrevista')),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(kS24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 72, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
-              const SizedBox(height: 24),
+              const Icon(Icons.error_outline, size: 72, color: kErrorRed),
+              const SizedBox(height: kS16),
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: kS24),
               FilledButton.icon(
                 onPressed: () => context.go('/home'),
                 icon: const Icon(Icons.home),
-                label: const Text('Tornar a l\'inici'),
+                label: const Text("Tornar a l'inici"),
               ),
             ],
           ),
@@ -411,3 +437,4 @@ class _InterviewScreenState extends State<InterviewScreen> {
     );
   }
 }
+

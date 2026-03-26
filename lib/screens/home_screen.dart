@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../main.dart';
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
-
-const _green = Color(0xFF00D4A1);
-const _bgDark = Color(0xFF0F1117);
-const _cardDark = Color(0xFF1A1E2E);
-const _textLight = Color(0xFFE8EAF0);
-const _textMuted = Color(0xFF7B8099);
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/app_section_header.dart';
+import '../widgets/session_tile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,16 +16,51 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const _catDescriptions = {
+    'software': 'Algorismes, arquitectura i sistemes',
+    'data': 'Anàlisi de dades i machine learning',
+    'design': 'UX/UI, prototipatge i recerca',
+    'management': 'Lideratge, àgil i planificació',
+    'marketing': 'Estratègia digital i xarxes',
+    'general': 'Competències transversals',
+  };
+
   List<InterviewCategory> _categories = [];
+  List<InterviewCategory> _filteredCategories = [];
   List<InterviewSession> _recentSessions = [];
   bool _loading = true;
-  int _selectedDrawerIndex = 0;
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
+    _searchController.addListener(_filterCategories);
   }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterCategories() {
+    final q = _searchController.text.toLowerCase().trim();
+    setState(() {
+      if (q.isEmpty) {
+        _filteredCategories = _allCats;
+      } else {
+        _filteredCategories = _allCats
+            .where((c) =>
+                c.name.toLowerCase().contains(q) ||
+                (_catDescriptions[c.id] ?? '').toLowerCase().contains(q))
+            .toList();
+      }
+    });
+  }
+
+  List<InterviewCategory> get _allCats =>
+      _categories.isEmpty ? InterviewCategory.defaults() : _categories;
 
   Future<void> _load() async {
     setState(() { _loading = true; });
@@ -37,7 +71,10 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       setState(() { _categories = InterviewCategory.defaults(); });
     } finally {
-      setState(() { _loading = false; });
+      setState(() {
+        _filteredCategories = _allCats;
+        _loading = false;
+      });
     }
   }
 
@@ -49,361 +86,384 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgDark,
-      drawer: _buildDrawer(context),
+      backgroundColor: kBgBase,
       appBar: AppBar(
-        backgroundColor: _cardDark,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: _textLight),
-        title: Row(
-          children: [
-            Image.asset(
+        automaticallyImplyLeading: false,
+        title: Center(
+          child: GestureDetector(
+            onTap: () => context.go('/landing'),
+            child: Image.asset(
               'assets/images/logo_entrevistat.png',
-              width: 32,
-              height: 32,
+              width: 28, height: 28,
               fit: BoxFit.contain,
             ),
-            const SizedBox(width: 10),
-            const Text("Entrevista't",
-                style: TextStyle(fontWeight: FontWeight.bold, color: _textLight, fontSize: 18)),
-          ],
+          ),
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: _green.withValues(alpha: 0.2),
-              child: const Icon(Icons.person, color: _green, size: 20),
+            padding: const EdgeInsets.only(right: kS12),
+            child: _ProfileMenuButton(
+              onProfile: () => context.go('/profile'),
+              onEdit: () => context.go('/profile/edit'),
+              onLogout: () {
+                ApiService.logout().then((_) {
+                  if (context.mounted) context.go('/login');
+                });
+              },
             ),
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _green))
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              color: _green,
-              backgroundColor: _cardDark,
+              color: kAccent,
+              backgroundColor: kBgSurface,
               onRefresh: _load,
               child: ListView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.symmetric(vertical: kS24),
                 children: [
-                  _buildHeroSection(),
-                  const SizedBox(height: 24),
-                  _buildPerformanceCard(),
-                  const SizedBox(height: 24),
-                  const Text('Categories',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textLight)),
-                  const SizedBox(height: 14),
-                  _buildCategoriesGrid(),
+                  // ── Welcome text (centered) ─────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                    child: Column(children: [
+                      Text(
+                        'Hola, ${ApiService.devUserName ?? "Usuari"}',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: kS4),
+                      Text(
+                        'Escull una categoria per començar una entrevista.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                    ]),
+                  ),
+
+                  const SizedBox(height: kS24),
+
+                  // ── Search bar (centered, discrete) ─────────────────
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Cercar categoria...',
+                            prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                            filled: true,
+                            fillColor: kBgSurface,
+                            contentPadding: const EdgeInsets.symmetric(vertical: kS12),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(kRadiusMd),
+                              borderSide: const BorderSide(color: kBorderSubtle),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(kRadiusMd),
+                              borderSide: const BorderSide(color: kAccent, width: 1.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: kS24),
+
+                  // ── Category cards (horizontally scrollable, max 3 visible) ──
+                  _buildCategoryRow(),
+
+                  const SizedBox(height: kS32),
+
+                  // ── Stats row ───────────────────────────────────────
                   if (_recentSessions.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Sessions recents',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textLight)),
-                        Text('Veure totes',
-                            style: TextStyle(color: _green, fontSize: 13, fontWeight: FontWeight.w600)),
-                      ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                      child: _buildStatsRow(),
                     ),
-                    const SizedBox(height: 12),
-                    ..._recentSessions.map(_buildSessionTile),
+                    const SizedBox(height: kS24),
                   ],
-                  const SizedBox(height: 20),
+
+                  // ── Recent sessions ─────────────────────────────────
+                  if (_recentSessions.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                      child: AppSectionHeader(
+                        title: 'Sessions recents',
+                        trailing: Text(
+                          'Veure totes',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: kAccent, fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: kS12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                      child: Column(
+                        children: _recentSessions.map((s) => SessionTile(
+                          session: s,
+                          onTap: () => context.go('/results/${s.id}'),
+                        )).toList(),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: kS24),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildHeroSection() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A2640), Color(0xFF0F1117)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _green.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _green.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _green.withValues(alpha: 0.3)),
-                ),
-                child: const Text('New', style: TextStyle(color: _green, fontSize: 11, fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Text('Master your\ninterviews with ',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _textLight, height: 1.25)),
-          const Text('AI', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: _green)),
-          const SizedBox(height: 10),
-          Text('Practica amb entrevistes simulades,\nanalitza el teu rendiment i millora cada dia.',
-              style: TextStyle(color: _textMuted, fontSize: 13, height: 1.5)),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () => context.go('/interview/software'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _green,
-              foregroundColor: _bgDark,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 0,
-            ),
-            child: const Text('Fer entrevista', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      backgroundColor: _cardDark,
-      child: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 16, 20),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: _green.withValues(alpha: 0.2),
-                    child: const Icon(Icons.person, color: _green, size: 32),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Usuari',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textLight)),
-                        Text('usuari@entrevistat.com',
-                            style: TextStyle(color: _textMuted, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: _textMuted),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
-            const SizedBox(height: 8),
-            _drawerItem(Icons.home_rounded, 'Home', 0, context,
-                onTap: () { Navigator.pop(context); context.go('/home'); }),
-            _drawerItem(Icons.person_outline_rounded, 'Perfil', 1, context,
-                onTap: () { Navigator.pop(context); context.go('/profile'); }),
-            _drawerItem(Icons.bar_chart_rounded, 'Informes', 2, context,
-                onTap: () { Navigator.pop(context); context.go('/profile'); }),
-            const Spacer(),
-            Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
-            _drawerItem(Icons.edit_outlined, 'Editar perfil', 3, context,
-                onTap: () { Navigator.pop(context); context.go('/profile/edit'); }),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              child: ListTile(
-                leading: const Icon(Icons.logout_rounded, color: _textMuted),
-                title: const Text('Tancar sessió', style: TextStyle(color: _textMuted)),
-                onTap: () async {
-                  await ApiService.logout();
-                  if (context.mounted) context.go('/login');
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _drawerItem(IconData icon, String label, int index, BuildContext context,
-      {VoidCallback? onTap}) {
-    final selected = _selectedDrawerIndex == index;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      child: ListTile(
-        leading: Icon(icon, color: selected ? _green : _textMuted),
-        title: Text(label,
-            style: TextStyle(
-              color: selected ? _green : _textMuted,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-            )),
-        trailing: Icon(Icons.chevron_right, color: selected ? _green : _textMuted, size: 20),
-        tileColor: selected ? _green.withValues(alpha: 0.1) : null,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        onTap: onTap ?? () {
-          setState(() { _selectedDrawerIndex = index; });
-          Navigator.pop(context);
-        },
-      ),
-    );
-  }
-
-  Widget _buildPerformanceCard() {
-    final avg = _averageScore;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _cardDark,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Rendiment General',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _textLight)),
-              Text('Últim mes', style: TextStyle(color: _textMuted, fontSize: 12)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              SizedBox(
-                width: 90, height: 90,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      value: avg / 100,
-                      strokeWidth: 8,
-                      backgroundColor: Colors.white.withValues(alpha: 0.08),
-                      valueColor: const AlwaysStoppedAnimation(_green),
-                      strokeCap: StrokeCap.round,
-                    ),
-                    Text('${avg.toInt()}%',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: _textLight)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${_recentSessions.length} sessions',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: _textLight)),
-                    const SizedBox(height: 4),
-                    const Text('completades', style: TextStyle(color: _textMuted, fontSize: 13)),
-                    const SizedBox(height: 12),
-                    _buildMiniStat(Icons.trending_up_rounded, 'Millora progressiva', _green),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiniStat(IconData icon, String label, Color color) {
-    return Row(
-      children: [
-        Icon(icon, color: color, size: 16),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(color: _textMuted, fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _buildCategoriesGrid() {
-    final cats = _categories.isEmpty ? InterviewCategory.defaults() : _categories;
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.3,
-      ),
-      itemCount: cats.length,
-      itemBuilder: (_, i) => _buildCategoryCard(cats[i]),
-    );
-  }
-
-  Widget _buildCategoryCard(InterviewCategory cat) {
-    return Material(
-      color: _cardDark,
-      borderRadius: BorderRadius.circular(16),
-      elevation: 0,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => context.go('/interview/${cat.id}'),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _green.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(cat.icon, color: _green, size: 22),
-              ),
-              Text(cat.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: _textLight),
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSessionTile(InterviewSession session) {
-    final scoreColor = session.overallScore >= 75
-        ? _green
-        : session.overallScore >= 50
-            ? Colors.orange
-            : Colors.redAccent;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: _cardDark,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: CircleAvatar(
-          backgroundColor: scoreColor.withValues(alpha: 0.15),
+  // ── Category horizontal scroll row ───────────────────────────────────────
+  Widget _buildCategoryRow() {
+    final cats = _filteredCategories;
+    if (cats.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+        child: Center(
           child: Text(
-            '${session.overallScore.toInt()}',
-            style: TextStyle(color: scoreColor, fontWeight: FontWeight.bold, fontSize: 13),
+            'Cap categoria coincideix amb la cerca.',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
-        title: Text(session.categoryName,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: _textLight)),
-        subtitle: Text(session.formattedDate, style: const TextStyle(color: _textMuted, fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right, color: _textMuted),
-        onTap: () => context.go('/results/${session.id}'),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Column(
+            children: cats.map((cat) {
+              final desc = _catDescriptions[cat.id] ?? '';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: kS12),
+                child: Material(
+                  color: kBgSurface,
+                  borderRadius: BorderRadius.circular(kRadiusMd),
+                  elevation: 0,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(kRadiusMd),
+                    onTap: () => context.go('/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}'),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(kRadiusMd),
+                        border: Border.all(color: kBorderSubtle),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS12),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(kS8),
+                            decoration: BoxDecoration(
+                              color: kAccent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(kRadiusSm),
+                            ),
+                            child: Icon(cat.icon, color: kAccent, size: 20),
+                          ),
+                          const SizedBox(width: kS16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(cat.name,
+                                    style: Theme.of(context).textTheme.titleSmall),
+                                if (desc.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
+                                  Text(desc,
+                                      style: Theme.of(context).textTheme.bodySmall),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: kS8),
+                          const Icon(Icons.chevron_right_rounded, color: kTextSecondary, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsRow() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS12),
+      decoration: BoxDecoration(
+        color: kBgSurface,
+        borderRadius: BorderRadius.circular(kRadiusMd),
+        border: Border.all(color: kBorderSubtle),
+      ),
+      child: Row(children: [
+        const Icon(Icons.bar_chart_rounded, color: kAccent, size: 20),
+        const SizedBox(width: kS12),
+        Text('${_averageScore.toInt()}%',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: kAccent)),
+        const SizedBox(width: kS8),
+        Text('·  ${_recentSessions.length} sessions',
+            style: Theme.of(context).textTheme.bodySmall),
+        const Spacer(),
+        GestureDetector(
+          onTap: () => context.go('/profile'),
+          child: Text('Veure historial',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: kAccent, fontWeight: FontWeight.w600)),
+        ),
+      ]),
+    );
+  }
+
+}
+
+// ── Profile avatar with hover animation + styled popup menu ────────────────
+class _ProfileMenuButton extends StatefulWidget {
+  final VoidCallback onProfile;
+  final VoidCallback onEdit;
+  final VoidCallback onLogout;
+
+  const _ProfileMenuButton({
+    required this.onProfile,
+    required this.onEdit,
+    required this.onLogout,
+  });
+
+  @override
+  State<_ProfileMenuButton> createState() => _ProfileMenuButtonState();
+}
+
+class _ProfileMenuButtonState extends State<_ProfileMenuButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _hoverCtrl;
+  late final Animation<double> _scaleAnim;
+  bool _hovering = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hoverCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 150));
+    _scaleAnim = Tween<double>(begin: 1.0, end: 1.12).animate(
+        CurvedAnimation(parent: _hoverCtrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _hoverCtrl.dispose();
+    super.dispose();
+  }
+
+  void _showMenu() {
+    final button = context.findRenderObject() as RenderBox;
+    final overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset(0, button.size.height + 8), ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero) + const Offset(0, 8),
+            ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      elevation: 12,
+      shadowColor: Colors.black.withValues(alpha: 0.5),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(kRadiusMd),
+        side: const BorderSide(color: kBorderSubtle),
+      ),
+      color: kBgElevated,
+      constraints: const BoxConstraints(minWidth: 200),
+      items: [
+        _menuItem(Icons.person_outline_rounded, 'Perfil', 'profile'),
+        _menuItem(Icons.edit_outlined, 'Editar perfil', 'edit'),
+        const PopupMenuDivider(height: 1),
+        _menuItem(Icons.logout_rounded, 'Tancar sessió', 'logout',
+            color: kErrorRed),
+      ],
+    ).then((value) {
+      if (value == null) return;
+      switch (value) {
+        case 'profile':
+          widget.onProfile();
+        case 'edit':
+          widget.onEdit();
+        case 'logout':
+          widget.onLogout();
+      }
+    });
+  }
+
+  PopupMenuEntry<String> _menuItem(IconData icon, String label, String value,
+      {Color? color}) {
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color ?? kTextSecondary),
+          const SizedBox(width: kS12),
+          Text(label,
+              style: TextStyle(
+                  color: color ?? kTextPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) {
+        setState(() => _hovering = true);
+        _hoverCtrl.forward();
+      },
+      onExit: (_) {
+        setState(() => _hovering = false);
+        _hoverCtrl.reverse();
+      },
+      child: GestureDetector(
+        onTap: _showMenu,
+        child: ScaleTransition(
+          scale: _scaleAnim,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _hovering
+                  ? kAccent.withValues(alpha: 0.25)
+                  : kAccent.withValues(alpha: 0.15),
+              boxShadow: _hovering
+                  ? [
+                      BoxShadow(
+                        color: kAccent.withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : [],
+            ),
+            child: const CircleAvatar(
+              radius: 17,
+              backgroundColor: Colors.transparent,
+              child: Icon(Icons.person, color: kAccent, size: 18),
+            ),
+          ),
+        ),
       ),
     );
   }
