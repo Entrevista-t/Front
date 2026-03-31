@@ -1,125 +1,164 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'screens/login_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/interview_screen.dart';
+import 'screens/results_screen.dart';
+import 'screens/landing_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/edit_profile_screen.dart';
+import 'screens/report_sent_screen.dart';
+import 'services/api_service.dart';
+import 'theme/app_theme.dart';
+import 'theme/theme_notifier.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const EntrevistatApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// Set to true to skip login (no API needed for UI review)
+const bool kDevBypassLogin = true;
 
-  // This widget is the root of your application.
+/// Global theme notifier — accessible via [EntrevistatApp.themeNotifier].
+final _themeNotifier = ThemeNotifier();
+
+CustomTransitionPage<void> _fadePage(Widget child) {
+  return CustomTransitionPage<void>(
+    child: child,
+    transitionDuration: const Duration(milliseconds: 250),
+    reverseTransitionDuration: const Duration(milliseconds: 200),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: child,
+      );
+    },
+  );
+}
+
+final _router = GoRouter(
+  initialLocation: '/landing',
+  debugLogDiagnostics: true,
+  redirect: (context, state) async {
+    final path = state.uri.path;
+    if (kDevBypassLogin) {
+      // When bypassing auth, redirect bare root to landing
+      if (path == '/') return '/landing';
+      return null;
+    }
+    final loggedIn = await ApiService.isLoggedIn();
+    if (path == '/') return loggedIn ? '/home' : '/login';
+    return null;
+  },
+  routes: [
+    GoRoute(path: '/landing', pageBuilder: (_, __) => _fadePage(const LandingScreen())),
+    GoRoute(
+      path: '/login',
+      pageBuilder: (_, state) {
+        final mode = state.uri.queryParameters['mode'];
+        return _fadePage(LoginScreen(initialSignUp: mode == 'register'));
+      },
+    ),
+    GoRoute(path: '/home', pageBuilder: (_, __) => _fadePage(const HomeScreen())),
+    GoRoute(
+      path: '/interview/:categoryId',
+      pageBuilder: (_, state) => _fadePage(InterviewScreen(
+        categoryId: state.pathParameters['categoryId']!,
+        categoryName: state.uri.queryParameters['name'],
+      )),
+    ),
+    GoRoute(
+      path: '/results/:sessionId',
+      pageBuilder: (_, state) => _fadePage(ResultsScreen(sessionId: state.pathParameters['sessionId']!)),
+    ),
+    GoRoute(
+      path: '/report-sent/:sessionId',
+      pageBuilder: (_, state) => _fadePage(ReportSentScreen(sessionId: state.pathParameters['sessionId']!)),
+    ),
+    GoRoute(path: '/profile', pageBuilder: (_, __) => _fadePage(const ProfileScreen())),
+    GoRoute(path: '/profile/edit', pageBuilder: (_, __) => _fadePage(const EditProfileScreen())),
+  ],
+);
+
+/// Smooth scrolling on all platforms (no clamping edge effect).
+class _SmoothScrollBehavior extends ScrollBehavior {
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+}
+
+class EntrevistatApp extends StatelessWidget {
+  const EntrevistatApp({super.key});
+
+  /// Provides access to the global theme notifier.
+  static ThemeNotifier get themeNotifier => _themeNotifier;
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    return ListenableBuilder(
+      listenable: _themeNotifier,
+      builder: (context, _) {
+        return MaterialApp.router(
+          title: "Entrevista't",
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: _themeNotifier.mode,
+          scrollBehavior: _SmoothScrollBehavior(),
+          routerConfig: _router,
+          builder: (context, child) {
+            return Stack(
+              children: [
+                child!,
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: _ThemeToggleBubble(),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
+/// Floating bubble for toggling between light and dark mode.
+class _ThemeToggleBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _themeNotifier.toggle(),
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Theme.of(context).colorScheme.surface,
+            border: Border.all(
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(
+            isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+            size: 18,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
