@@ -41,7 +41,7 @@ jobs:
           pull: true
           push: true
           build-args: |
-            API_URL=https://api.tudominio.com
+            API_URL=https://api.kire.ovh
           tags: ${{ steps.meta.outputs.image }}
 
       # - name: Deploy to Swarm manager
