@@ -24,19 +24,19 @@ class AppEmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: kTextDisabled, size: 52),
+          Icon(icon, color: context.colors.textDisabled, size: 52),
           const SizedBox(height: kS16),
           Text(
             message,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: kTextSecondary,
+              color: context.colors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
           if (buttonLabel != null && onButtonTap != null) ...[
             const SizedBox(height: kS24),
             SizedBox(
-              width: 220,
+              width: 280,
               child: ElevatedButton(
                 onPressed: onButtonTap,
                 child: Text(buttonLabel!),

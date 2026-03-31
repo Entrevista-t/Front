@@ -1,20 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
+
+/// Font family constants — loaded from assets/fonts/.
+const kFontSerif = 'Gambetta';
+const kFontSans = 'Satoshi';
 
 class AppTheme {
   AppTheme._();
 
-  static ThemeData dark() {
-    final base = ThemeData.dark(useMaterial3: true);
+  // ── Shared text styles ──────────────────────────────────────────────────
+  static const _serifStyle = TextStyle(fontFamily: kFontSerif, fontStyle: FontStyle.normal);
+  static const _sansStyle = TextStyle(fontFamily: kFontSans, fontStyle: FontStyle.normal);
+
+  // ── Light theme ─────────────────────────────────────────────────────────
+  static ThemeData light() => _build(Brightness.light, AppColors.light);
+
+  // ── Dark theme ──────────────────────────────────────────────────────────
+  static ThemeData dark() => _build(Brightness.dark, AppColors.dark);
+
+  // ── Builder ─────────────────────────────────────────────────────────────
+  static ThemeData _build(Brightness brightness, AppColors c) {
+    final isDark = brightness == Brightness.dark;
+    final base = isDark ? ThemeData.dark(useMaterial3: true) : ThemeData.light(useMaterial3: true);
+
     final colorScheme = ColorScheme.fromSeed(
       seedColor: kAccent,
-      brightness: Brightness.dark,
+      brightness: brightness,
     ).copyWith(
       primary: kAccent,
-      surface: kBgSurface,
-      onSurface: kTextPrimary,
+      surface: c.bgSurface,
+      onSurface: c.textPrimary,
       onPrimary: Colors.white,
       secondary: kAccent,
       onSecondary: Colors.white,
@@ -22,108 +38,124 @@ class AppTheme {
       onError: Colors.white,
     );
 
-    final textTheme = GoogleFonts.interTextTheme(base.textTheme).copyWith(
-      displayLarge: GoogleFonts.inter(
-        fontSize: 32, fontWeight: FontWeight.w700,
-        color: kTextPrimary, letterSpacing: -0.5, height: 1.2,
+    final textTheme = base.textTheme.copyWith(
+      displayLarge: _serifStyle.copyWith(
+        fontSize: 48, fontWeight: FontWeight.w500,
+        color: c.textPrimary, letterSpacing: -0.5, height: 1.1,
       ),
-      headlineMedium: GoogleFonts.inter(
-        fontSize: 22, fontWeight: FontWeight.w700,
-        color: kTextPrimary, letterSpacing: -0.3, height: 1.3,
+      displayMedium: _serifStyle.copyWith(
+        fontSize: 36, fontWeight: FontWeight.w500,
+        color: c.textPrimary, letterSpacing: -0.3, height: 1.15,
       ),
-      headlineSmall: GoogleFonts.inter(
+      headlineMedium: _serifStyle.copyWith(
+        fontSize: 28, fontWeight: FontWeight.w500,
+        color: c.textPrimary, letterSpacing: -0.3, height: 1.2,
+      ),
+      headlineSmall: _serifStyle.copyWith(
+        fontSize: 22, fontWeight: FontWeight.w500,
+        color: c.textPrimary, height: 1.25,
+      ),
+      titleLarge: _sansStyle.copyWith(
         fontSize: 18, fontWeight: FontWeight.w600,
-        color: kTextPrimary, height: 1.3,
+        color: c.textPrimary, letterSpacing: -0.2,
       ),
-      titleMedium: GoogleFonts.inter(
+      titleMedium: _sansStyle.copyWith(
         fontSize: 16, fontWeight: FontWeight.w600,
-        color: kTextPrimary,
+        color: c.textPrimary,
       ),
-      titleSmall: GoogleFonts.inter(
+      titleSmall: _sansStyle.copyWith(
         fontSize: 14, fontWeight: FontWeight.w600,
-        color: kTextPrimary,
+        color: c.textPrimary,
       ),
-      bodyLarge: GoogleFonts.inter(
-        fontSize: 15, fontWeight: FontWeight.w400,
-        color: kTextPrimary, height: 1.5,
+      bodyLarge: _sansStyle.copyWith(
+        fontSize: 16, fontWeight: FontWeight.w400,
+        color: c.textPrimary, height: 1.6,
       ),
-      bodyMedium: GoogleFonts.inter(
+      bodyMedium: _sansStyle.copyWith(
         fontSize: 14, fontWeight: FontWeight.w400,
-        color: kTextPrimary, height: 1.5,
+        color: c.textPrimary, height: 1.5,
       ),
-      bodySmall: GoogleFonts.inter(
+      bodySmall: _sansStyle.copyWith(
         fontSize: 13, fontWeight: FontWeight.w400,
-        color: kTextSecondary, height: 1.5,
+        color: c.textSecondary, height: 1.5,
       ),
-      labelLarge: GoogleFonts.inter(
+      labelLarge: _sansStyle.copyWith(
         fontSize: 14, fontWeight: FontWeight.w600,
-        color: kTextPrimary,
+        color: c.textPrimary,
       ),
-      labelSmall: GoogleFonts.inter(
+      labelSmall: _sansStyle.copyWith(
         fontSize: 11, fontWeight: FontWeight.w500,
-        color: kTextSecondary, letterSpacing: 0.4,
+        color: c.textSecondary, letterSpacing: 0.4,
       ),
     );
 
-    final buttonShape = RoundedRectangleBorder(
+    final pillShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(kRadiusFull),
+    );
+    final standardShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(kRadiusMd),
     );
+
+    // CTA button colours: dark bg in light mode, lighter surface in dark mode
+    final ctaBg = isDark ? const Color(0xFFF5F5F5) : c.textPrimary;
+    final ctaFg = isDark ? const Color(0xFF1A1A1A) : Colors.white;
 
     return base.copyWith(
       colorScheme: colorScheme,
       textTheme: textTheme,
-      scaffoldBackgroundColor: kBgBase,
+      scaffoldBackgroundColor: c.bgBase,
+      extensions: [c],
 
       appBarTheme: AppBarTheme(
-        backgroundColor: kBgSurface,
-        foregroundColor: kTextPrimary,
+        backgroundColor: c.bgBase,
+        foregroundColor: c.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: _sansStyle.copyWith(
           fontSize: 17, fontWeight: FontWeight.w600,
-          color: kTextPrimary,
+          color: c.textPrimary,
         ),
-        iconTheme: const IconThemeData(color: kTextPrimary),
-        actionsIconTheme: const IconThemeData(color: kTextSecondary),
-        shape: const Border(
-          bottom: BorderSide(color: kBorderSubtle),
+        iconTheme: IconThemeData(color: c.textPrimary),
+        actionsIconTheme: IconThemeData(color: c.textSecondary),
+        shape: Border(
+          bottom: BorderSide(color: c.borderSubtle),
         ),
       ),
 
-      drawerTheme: const DrawerThemeData(
-        backgroundColor: kBgSurface,
+      drawerTheme: DrawerThemeData(
+        backgroundColor: c.bgSurface,
         scrimColor: Colors.transparent,
       ),
 
       cardTheme: CardThemeData(
-        color: kBgSurface,
+        color: c.bgSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kRadiusMd),
-          side: const BorderSide(color: kBorderSubtle),
+          side: BorderSide(color: c.borderSubtle),
         ),
         margin: EdgeInsets.zero,
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: kAccent,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: kAccent.withValues(alpha: 0.4),
-          disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+          backgroundColor: ctaBg,
+          foregroundColor: ctaFg,
+          disabledBackgroundColor: ctaBg.withValues(alpha: 0.4),
+          disabledForegroundColor: ctaFg.withValues(alpha: 0.5),
           elevation: 0,
           minimumSize: const Size(double.infinity, 48),
-          shape: buttonShape,
-          textStyle: GoogleFonts.inter(
-            fontSize: 15, fontWeight: FontWeight.w600,
+          shape: pillShape,
+          textStyle: _sansStyle.copyWith(
+            fontSize: 15, fontWeight: FontWeight.w500,
           ),
         ).copyWith(
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.hovered)) {
-              return Colors.white.withValues(alpha: 0.1);
+              return ctaFg.withValues(alpha: 0.1);
             }
             if (states.contains(WidgetState.pressed)) {
-              return Colors.white.withValues(alpha: 0.15);
+              return ctaFg.withValues(alpha: 0.15);
             }
             return null;
           }),
@@ -132,41 +164,41 @@ class AppTheme {
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: kAccent,
-          foregroundColor: Colors.white,
+          backgroundColor: ctaBg,
+          foregroundColor: ctaFg,
           elevation: 0,
           minimumSize: const Size(double.infinity, 48),
-          shape: buttonShape,
-          textStyle: GoogleFonts.inter(
-            fontSize: 15, fontWeight: FontWeight.w600,
+          shape: pillShape,
+          textStyle: _sansStyle.copyWith(
+            fontSize: 15, fontWeight: FontWeight.w500,
           ),
         ),
       ),
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: kTextPrimary,
-          side: const BorderSide(color: kBorderSubtle),
+          foregroundColor: c.textSecondary,
+          side: BorderSide(color: c.borderSubtle),
           minimumSize: const Size(double.infinity, 48),
-          shape: buttonShape,
-          textStyle: GoogleFonts.inter(
-            fontSize: 15, fontWeight: FontWeight.w600,
+          shape: pillShape,
+          textStyle: _sansStyle.copyWith(
+            fontSize: 15, fontWeight: FontWeight.w500,
           ),
         ).copyWith(
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.hovered)) {
-              return kAccent.withValues(alpha: 0.08);
+              return c.bgSurface.withValues(alpha: isDark ? 0.1 : 1.0);
             }
             if (states.contains(WidgetState.pressed)) {
-              return kAccent.withValues(alpha: 0.12);
+              return c.borderSubtle.withValues(alpha: isDark ? 0.15 : 1.0);
             }
             return null;
           }),
           side: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.hovered)) {
-              return BorderSide(color: kAccent.withValues(alpha: 0.5));
+              return BorderSide(color: c.borderStrong);
             }
-            return const BorderSide(color: kBorderSubtle);
+            return BorderSide(color: c.borderSubtle);
           }),
         ),
       ),
@@ -174,13 +206,13 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: kAccent,
-          textStyle: GoogleFonts.inter(
+          textStyle: _sansStyle.copyWith(
             fontSize: 14, fontWeight: FontWeight.w600,
           ),
         ).copyWith(
           overlayColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.hovered)) {
-              return kAccent.withValues(alpha: 0.08);
+              return kAccent.withValues(alpha: 0.06);
             }
             return null;
           }),
@@ -189,16 +221,16 @@ class AppTheme {
 
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: kBgBase,
-        hintStyle: GoogleFonts.inter(
-          color: kTextDisabled, fontSize: 14,
+        fillColor: c.bgSurface,
+        hintStyle: _sansStyle.copyWith(
+          color: c.textDisabled, fontSize: 14,
         ),
-        labelStyle: GoogleFonts.inter(
-          color: kTextSecondary, fontSize: 12, fontWeight: FontWeight.w500,
+        labelStyle: _sansStyle.copyWith(
+          color: c.textSecondary, fontSize: 12, fontWeight: FontWeight.w500,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(kRadiusMd),
-          borderSide: const BorderSide(color: kBorderSubtle),
+          borderSide: BorderSide(color: c.borderSubtle),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(kRadiusMd),
@@ -222,29 +254,29 @@ class AppTheme {
           return states.contains(WidgetState.selected) ? kAccent : Colors.transparent;
         }),
         checkColor: WidgetStateProperty.all(Colors.white),
-        side: const BorderSide(color: kTextDisabled),
+        side: BorderSide(color: c.borderStrong),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
 
-      dividerTheme: const DividerThemeData(
-        color: kBorderSubtle,
+      dividerTheme: DividerThemeData(
+        color: c.borderSubtle,
         thickness: 1,
         space: 1,
       ),
 
       listTileTheme: ListTileThemeData(
         tileColor: Colors.transparent,
-        iconColor: kTextSecondary,
-        textColor: kTextPrimary,
+        iconColor: c.textSecondary,
+        textColor: c.textPrimary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kRadiusMd),
         ),
       ),
 
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: kBgElevated,
-        contentTextStyle: GoogleFonts.inter(
-          color: kTextPrimary, fontSize: 14,
+        backgroundColor: c.textPrimary,
+        contentTextStyle: _sansStyle.copyWith(
+          color: isDark ? Colors.black : Colors.white, fontSize: 14,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(kRadiusMd),
@@ -256,19 +288,28 @@ class AppTheme {
         color: kAccent,
       ),
 
-      iconTheme: const IconThemeData(
-        color: kTextSecondary,
+      iconTheme: IconThemeData(
+        color: c.textSecondary,
         size: 20,
       ),
 
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: kBgElevated,
+          color: c.textPrimary,
           borderRadius: BorderRadius.circular(kRadiusSm),
-          border: Border.all(color: kBorderSubtle),
         ),
-        textStyle: GoogleFonts.inter(
-          color: kTextPrimary, fontSize: 12,
+        textStyle: _sansStyle.copyWith(
+          color: isDark ? Colors.black : Colors.white, fontSize: 12,
+        ),
+      ),
+
+      popupMenuTheme: PopupMenuThemeData(
+        color: c.bgSurface,
+        elevation: 8,
+        shadowColor: const Color(0x1A000000),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(kRadiusMd),
+          side: BorderSide(color: c.borderSubtle),
         ),
       ),
     );

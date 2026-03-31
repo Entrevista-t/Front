@@ -17,9 +17,9 @@ class SessionTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: kS8),
       decoration: BoxDecoration(
-        color: kBgSurface,
+        color: context.colors.bgSurface,
         borderRadius: BorderRadius.circular(kRadiusMd),
-        border: Border.all(color: kBorderSubtle),
+        border: Border.all(color: context.colors.borderSubtle),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(
@@ -34,7 +34,7 @@ class SessionTile extends StatelessWidget {
           session.formattedDate,
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        trailing: const Icon(Icons.chevron_right, color: kTextSecondary, size: 20),
+        trailing: Icon(Icons.chevron_right, color: context.colors.textSecondary, size: 20),
         onTap: onTap,
       ),
     );

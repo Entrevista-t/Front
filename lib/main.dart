@@ -10,6 +10,7 @@ import 'screens/edit_profile_screen.dart';
 import 'screens/report_sent_screen.dart';
 import 'services/api_service.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_notifier.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,9 @@ void main() {
 
 // Set to true to skip login (no API needed for UI review)
 const bool kDevBypassLogin = true;
+
+/// Global theme notifier — accessible via [EntrevistatApp.themeNotifier].
+final _themeNotifier = ThemeNotifier();
 
 CustomTransitionPage<void> _fadePage(Widget child) {
   return CustomTransitionPage<void>(
@@ -77,16 +81,84 @@ final _router = GoRouter(
   ],
 );
 
+/// Smooth scrolling on all platforms (no clamping edge effect).
+class _SmoothScrollBehavior extends ScrollBehavior {
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+}
+
 class EntrevistatApp extends StatelessWidget {
   const EntrevistatApp({super.key});
 
+  /// Provides access to the global theme notifier.
+  static ThemeNotifier get themeNotifier => _themeNotifier;
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: "Entrevista't",
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark(),
-      routerConfig: _router,
+    return ListenableBuilder(
+      listenable: _themeNotifier,
+      builder: (context, _) {
+        return MaterialApp.router(
+          title: "Entrevista't",
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: _themeNotifier.mode,
+          scrollBehavior: _SmoothScrollBehavior(),
+          routerConfig: _router,
+          builder: (context, child) {
+            return Stack(
+              children: [
+                child!,
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: _ThemeToggleBubble(),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Floating bubble for toggling between light and dark mode.
+class _ThemeToggleBubble extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _themeNotifier.toggle(),
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Theme.of(context).colorScheme.surface,
+            border: Border.all(
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(
+            isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+            size: 18,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+      ),
     );
   }
 }

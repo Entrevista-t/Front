@@ -26,10 +26,10 @@ class GlowIcon extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(kRadiusMd),
         boxShadow: glow
-            ? [BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 12, spreadRadius: 1)]
+            ? [BoxShadow(color: color.withValues(alpha: 0.15), blurRadius: 12, spreadRadius: 1)]
             : null,
       ),
       child: Icon(icon, color: color, size: iconSize),

@@ -102,9 +102,9 @@ class _ReportSentScreenState extends State<ReportSentScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS12),
                   decoration: BoxDecoration(
-                    color: kBgSurface,
+                    color: context.colors.bgSurface,
                     borderRadius: BorderRadius.circular(kRadiusMd),
-                    border: Border.all(color: kBorderSubtle),
+                    border: Border.all(color: context.colors.borderSubtle),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,

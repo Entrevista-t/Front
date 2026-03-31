@@ -4,6 +4,8 @@ import '../main.dart' show kDevBypassLogin;
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_theme.dart' show kFontSerif;
+import '../widgets/dot_grid_background.dart';
 
 class LoginScreen extends StatefulWidget {
   final bool initialSignUp;
@@ -71,14 +73,18 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth > 720) {
-            return _buildWebLayout(context);
-          } else {
-            return _buildMobileLayout(context);
-          }
-        },
+      backgroundColor: context.colors.bgBase,
+      body: DotGridBackground(
+        showGlows: true,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth > 720) {
+              return _buildWebLayout(context);
+            } else {
+              return _buildMobileLayout(context);
+            }
+          },
+        ),
       ),
     );
   }
@@ -88,13 +94,12 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildWebLayout(BuildContext context) {
     return Center(
       child: Container(
-        width: 900,
-        height: 600,
+        constraints: const BoxConstraints(maxWidth: 900, maxHeight: 700),
         margin: const EdgeInsets.all(kS32),
         decoration: BoxDecoration(
-          color: kBgSurface,
+          color: context.colors.bgSurface,
           borderRadius: BorderRadius.circular(kRadiusLg),
-          border: Border.all(color: kBorderSubtle),
+          border: Border.all(color: context.colors.borderSubtle),
         ),
         clipBehavior: Clip.antiAlias,
         child: Row(
@@ -102,9 +107,13 @@ class _LoginScreenState extends State<LoginScreen> {
             Expanded(flex: 5, child: _buildBrandingPanel(context)),
             Expanded(
               flex: 5,
-              child: SingleChildScrollView(
+              child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 44, vertical: 40),
-                child: _buildFormContent(context),
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: _buildFormContent(context),
+                  ),
+                ),
               ),
             ),
           ],
@@ -118,8 +127,8 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         Container(
           decoration: BoxDecoration(
-            color: kBgBase,
-            border: Border(right: BorderSide(color: kBorderSubtle)),
+            color: context.colors.bgBase,
+            border: Border(right: BorderSide(color: context.colors.borderSubtle)),
           ),
         ),
         // Decorative gradient orb
@@ -133,13 +142,13 @@ class _LoginScreenState extends State<LoginScreen> {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  kAccent.withValues(alpha: 0.08),
-                  Colors.transparent,
+                  context.colors.glowBlue,
+                  context.colors.glowSlate.withValues(alpha: 0),
                 ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: kAccent.withValues(alpha: 0.06),
+                  color: context.colors.glowBlue.withValues(alpha: 0.5),
                   blurRadius: 60,
                   spreadRadius: 20,
                 ),
@@ -162,18 +171,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(width: kS12),
                   Text("Entrevista't",
-                    style: Theme.of(context).textTheme.titleMedium),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontFamily: kFontSerif,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: FontStyle.normal,
+                    )),
                 ],
               ),
               const SizedBox(height: kS32),
               Text(
                 'Domina les teves\nentrevistes amb IA',
-                style: Theme.of(context).textTheme.headlineMedium,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w400,
+                ),
               ),
               const SizedBox(height: kS12),
               Text(
                 'Practica entrevistes simulades i rep feedback\npersonalitzat per millorar cada vegada.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.6),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.6),
               ),
               const SizedBox(height: kS32),
               _brandingFeature(context, Icons.visibility_outlined, 'Eye Tracking en temps real'),
@@ -196,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Container(
           padding: const EdgeInsets.all(kS8),
           decoration: BoxDecoration(
-            color: kAccent.withValues(alpha: 0.12),
+            color: kAccent.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(kRadiusSm),
           ),
           child: Icon(icon, color: kAccent, size: 16),
@@ -228,7 +243,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(width: kS8),
                   Text("Entrevista't",
-                    style: Theme.of(context).textTheme.titleSmall),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontFamily: kFontSerif,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: FontStyle.normal,
+                    )),
                 ],
               ),
             ),
@@ -340,13 +359,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
         Row(
           children: [
-            const Expanded(child: Divider(color: kTextDisabled, thickness: 0.5)),
+            Expanded(child: Divider(color: context.colors.textDisabled, thickness: 0.5)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: kS12),
               child: Text('o',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: kTextDisabled)),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.colors.textDisabled)),
             ),
-            const Expanded(child: Divider(color: kTextDisabled, thickness: 0.5)),
+            Expanded(child: Divider(color: context.colors.textDisabled, thickness: 0.5)),
           ],
         ),
         const SizedBox(height: kS16),
@@ -393,7 +412,7 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: kTextSecondary, fontWeight: FontWeight.w600,
+          color: context.colors.textSecondary, fontWeight: FontWeight.w600,
         )),
         const SizedBox(height: kS8),
         TextField(

@@ -65,7 +65,7 @@ class _ScoreBadgeState extends State<ScoreBadge>
               CircularProgressIndicator(
                 value: val,
                 strokeWidth: widget.size * 0.1,
-                backgroundColor: Colors.white.withValues(alpha: 0.08),
+                backgroundColor: context.colors.borderSubtle.withValues(alpha: 0.3),
                 valueColor: AlwaysStoppedAnimation(color),
                 strokeCap: StrokeCap.round,
               ),
@@ -73,7 +73,7 @@ class _ScoreBadgeState extends State<ScoreBadge>
                 '${(val * 100).toInt()}',
                 style: TextStyle(
                   color: color,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w600,
                   fontSize: widget.size * 0.28,
                 ),
               ),

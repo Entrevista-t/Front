@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../main.dart';
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_theme.dart' show kFontSerif;
 import '../widgets/app_section_header.dart';
+import '../widgets/dot_grid_background.dart';
+import '../widgets/glass_container.dart';
 import '../widgets/glow_icon.dart';
 import '../widgets/session_tile.dart';
 
@@ -109,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBgBase,
+      backgroundColor: context.colors.bgBase,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Center(
@@ -117,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen>
             onTap: () => context.go('/landing'),
             child: Image.asset(
               'assets/images/logo_entrevistat.png',
-              width: 34, height: 34,
+              width: 28, height: 28,
               fit: BoxFit.contain,
             ),
           ),
@@ -137,11 +139,13 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ],
       ),
-      body: _loading
+      body: DotGridBackground(
+        showGlows: true,
+        child: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               color: kAccent,
-              backgroundColor: kBgSurface,
+              backgroundColor: context.colors.bgSurface,
               onRefresh: _load,
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: kS24),
@@ -152,13 +156,21 @@ class _HomeScreenState extends State<HomeScreen>
                     child: Column(children: [
                       Text(
                         _greeting,
-                        style: Theme.of(context).textTheme.headlineMedium,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontFamily: kFontSerif,
+                          fontWeight: FontWeight.w600,
+                          fontStyle: FontStyle.normal,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: kS4),
                       Text(
                         'Escull una categoria per començar una entrevista.',
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontFamily: kFontSerif,
+                          fontWeight: FontWeight.w500,
+                          fontStyle: FontStyle.normal,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ]),
@@ -178,11 +190,11 @@ class _HomeScreenState extends State<HomeScreen>
                             hintText: 'Cercar categoria...',
                             prefixIcon: const Icon(Icons.search_rounded, size: 20),
                             filled: true,
-                            fillColor: kBgSurface,
+                            fillColor: context.colors.bgSurface,
                             contentPadding: const EdgeInsets.symmetric(vertical: kS12),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(kRadiusMd),
-                              borderSide: const BorderSide(color: kBorderSubtle),
+                              borderSide: BorderSide(color: context.colors.borderSubtle),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(kRadiusMd),
@@ -239,6 +251,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
             ),
+      ),
     );
   }
 
@@ -301,14 +314,8 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildStatsRow() {
-    return Container(
+    return GlassContainer(
       padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS12),
-      decoration: BoxDecoration(
-        color: kBgSurface,
-        borderRadius: BorderRadius.circular(kRadiusMd),
-        border: Border.all(color: kBorderSubtle),
-        boxShadow: kShadowSm,
-      ),
       child: Row(children: [
         const GlowIcon(
           icon: Icons.bar_chart_rounded,
@@ -363,14 +370,16 @@ class _CategoryCardState extends State<_CategoryCard> {
         duration: kDurationFast,
         curve: kCurveHover,
         decoration: BoxDecoration(
-          color: kBgSurface,
+          color: context.colors.bgSurface,
           borderRadius: BorderRadius.circular(kRadiusMd),
           border: Border.all(
             color: _hovering
-                ? kAccent.withValues(alpha: 0.3)
-                : kBorderSubtle,
+                ? context.colors.textDisabled
+                : context.colors.borderStrong,
           ),
-          boxShadow: _hovering ? kShadowMd : null,
+          boxShadow: _hovering
+              ? kShadowMd
+              : const [BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2))],
         ),
         child: Material(
           color: Colors.transparent,
@@ -402,8 +411,8 @@ class _CategoryCardState extends State<_CategoryCard> {
                     ),
                   ),
                   const SizedBox(width: kS8),
-                  const Icon(Icons.chevron_right_rounded,
-                      color: kTextSecondary, size: 20),
+                  Icon(Icons.chevron_right_rounded,
+                      color: context.colors.textSecondary, size: 20),
                 ],
               ),
             ),
@@ -470,9 +479,9 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
       shadowColor: Colors.black.withValues(alpha: 0.5),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(kRadiusMd),
-        side: const BorderSide(color: kBorderSubtle),
+        side: BorderSide(color: context.colors.borderSubtle),
       ),
-      color: kBgElevated,
+      color: context.colors.bgSurface,
       constraints: const BoxConstraints(minWidth: 200),
       items: [
         _menuItem(Icons.person_outline_rounded, 'Perfil', 'profile'),
@@ -500,11 +509,11 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
       value: value,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: color ?? kTextSecondary),
+          Icon(icon, size: 18, color: color ?? context.colors.textSecondary),
           const SizedBox(width: kS12),
           Text(label,
               style: TextStyle(
-                  color: color ?? kTextPrimary,
+                  color: color ?? context.colors.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w500)),
         ],
@@ -533,12 +542,12 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: _hovering
-                  ? kAccent.withValues(alpha: 0.25)
-                  : kAccent.withValues(alpha: 0.15),
+                  ? kAccent.withValues(alpha: 0.12)
+                  : kAccent.withValues(alpha: 0.08),
               boxShadow: _hovering
                   ? [
                       BoxShadow(
-                        color: kAccent.withValues(alpha: 0.3),
+                        color: kAccent.withValues(alpha: 0.15),
                         blurRadius: 12,
                         spreadRadius: 1,
                       ),

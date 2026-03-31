@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
-/// A reusable card container that matches the enterprise dark theme.
+/// A reusable card container matching the Editorial Tech light theme.
 /// Supports optional hover elevation, gradient border, and tap callbacks.
 class AppCard extends StatefulWidget {
   final Widget child;
@@ -42,8 +42,8 @@ class _AppCardState extends State<AppCard> {
       card = Container(
         decoration: BoxDecoration(
           borderRadius: radius,
-          gradient: _hovering ? kGradientCardBorder : null,
-          border: _hovering ? null : Border.all(color: kBorderSubtle),
+          gradient: _hovering ? context.colors.gradientCardBorder : null,
+          border: _hovering ? null : Border.all(color: context.colors.borderSubtle),
           boxShadow: _hovering ? kShadowMd : null,
         ),
         child: Container(
@@ -53,7 +53,7 @@ class _AppCardState extends State<AppCard> {
               ? const EdgeInsets.all(1)
               : EdgeInsets.zero,
           decoration: BoxDecoration(
-            color: widget.color ?? kBgSurface,
+            color: widget.color ?? context.colors.bgSurface,
             borderRadius: radius,
           ),
           child: widget.child,
@@ -66,12 +66,10 @@ class _AppCardState extends State<AppCard> {
         width: double.infinity,
         padding: widget.padding ?? const EdgeInsets.all(kS24),
         decoration: BoxDecoration(
-          color: widget.color ?? kBgSurface,
+          color: widget.color ?? context.colors.bgSurface,
           borderRadius: radius,
           border: Border.all(
-            color: _hovering
-                ? kAccent.withValues(alpha: 0.3)
-                : kBorderSubtle,
+            color: _hovering ? context.colors.borderStrong : context.colors.borderSubtle,
           ),
           boxShadow: _hovering ? kShadowMd : kShadowSm,
         ),

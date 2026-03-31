@@ -1,115 +1,11 @@
-import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-
-// ── Floating particles background ──────────────────────────────────────────
-class _ParticlesPainter extends CustomPainter {
-  final double tick;
-  final List<_Particle> particles;
-
-  _ParticlesPainter(this.tick, this.particles);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final p in particles) {
-      final x = (p.x * size.width + tick * p.dx * size.width) % size.width;
-      final y = (p.y * size.height + tick * p.dy * size.height) % size.height;
-      canvas.drawCircle(
-        Offset(x, y),
-        p.radius,
-        Paint()..color = p.color.withValues(alpha: p.opacity),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ParticlesPainter old) => true;
-}
-
-class _Particle {
-  final double x, y, dx, dy, radius, opacity;
-  final Color color;
-  _Particle(this.x, this.y, this.dx, this.dy, this.radius, this.opacity, this.color);
-}
-
-// ── Scroll-triggered fade+slide widget ─────────────────────────────────────
-class _ScrollReveal extends StatefulWidget {
-  final Widget child;
-  final Duration delay;
-  const _ScrollReveal({required this.child, this.delay = Duration.zero});
-
-  @override
-  State<_ScrollReveal> createState() => _ScrollRevealState();
-}
-
-class _ScrollRevealState extends State<_ScrollReveal>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  bool _triggered = false;
-  ScrollPosition? _scrollPosition;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Listen to the ancestor scrollable's position
-    final newPos = Scrollable.maybeOf(context)?.position;
-    if (newPos != _scrollPosition) {
-      _scrollPosition?.removeListener(_maybeReveal);
-      _scrollPosition = newPos;
-      _scrollPosition?.addListener(_maybeReveal);
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeReveal());
-  }
-
-  @override
-  void dispose() {
-    _scrollPosition?.removeListener(_maybeReveal);
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  void _maybeReveal() {
-    if (_triggered || !mounted) return;
-    final ro = context.findRenderObject();
-    if (ro == null || !ro.attached) return;
-    final box = ro as RenderBox;
-    if (!box.hasSize) return;
-    final offset = box.localToGlobal(Offset.zero);
-    final screenH = MediaQuery.of(context).size.height;
-    if (offset.dy < screenH + 80) {
-      _triggered = true;
-      Future.delayed(widget.delay, () {
-        if (mounted) _ctrl.forward();
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, child) {
-        final t = Curves.easeOut.transform(_ctrl.value);
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-              offset: Offset(0, 24 * (1 - t)), child: child),
-        );
-      },
-      child: widget.child,
-    );
-  }
-}
+import '../theme/app_theme.dart' show kFontSerif, kFontSans;
+import '../widgets/dot_grid_background.dart';
+import '../widgets/floating_glass_card.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 class LandingScreen extends StatefulWidget {
@@ -121,24 +17,34 @@ class LandingScreen extends StatefulWidget {
 
 class _LandingScreenState extends State<LandingScreen>
     with TickerProviderStateMixin {
-  late final AnimationController _pulse;
-  late final AnimationController _particleCtrl;
   late final AnimationController _stagger;
   late final List<Animation<double>> _heroFades;
   late final List<Animation<Offset>> _heroSlides;
-  late final List<_Particle> _particles;
 
   static const _heroItems = 4;
+
+  // Testimonial data for floating cards
+  static const _reviews = [
+    _Review('Anna M.', "M'ha ajudat molt a preparar l'entrevista de Google!",
+        5, kAccentTeal),
+    _Review('Marc R.', "L'anàlisi de veu és increïble. Mai havia vist res igual.",
+        5, kAccentSky),
+    _Review('Laia P.', 'Vaig aconseguir la feina gràcies a practicar aquí.',
+        5, kAccentAmber),
+    _Review('Jordi S.', 'El feedback en temps real és molt útil per millorar.',
+        4, kAccentRose),
+    _Review('Núria V.', "L'informe PDF m'ajuda a veure el meu progrés real.",
+        5, kAccentTeal),
+    _Review('Marta G.', 'La millor eina de preparació que he provat mai.',
+        5, kAccentSky),
+  ];
+
+  // Avatar indices matching gender: F=4,6,7,9  M=5,8
+  static const _reviewAvatars = [4, 5, 6, 8, 7, 9];
 
   @override
   void initState() {
     super.initState();
-    _pulse = AnimationController(
-        vsync: this, duration: const Duration(seconds: 2))
-      ..repeat(reverse: true);
-    _particleCtrl = AnimationController(
-        vsync: this, duration: const Duration(seconds: 30))
-      ..repeat();
     _stagger = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 1600))
       ..forward();
@@ -156,21 +62,10 @@ class _LandingScreenState extends State<LandingScreen>
           .animate(CurvedAnimation(
               parent: _stagger, curve: Interval(s, e, curve: Curves.easeOut)));
     });
-
-    final rng = Random(42);
-    final colors = [kAccent, kAccentTeal, kAccentAmber, kAccentSky, kAccentRose];
-    _particles = List.generate(28, (_) => _Particle(
-      rng.nextDouble(), rng.nextDouble(),
-      (rng.nextDouble() - 0.5) * 0.3, (rng.nextDouble() - 0.5) * 0.15,
-      rng.nextDouble() * 1.8 + 0.6, rng.nextDouble() * 0.12 + 0.03,
-      colors[rng.nextInt(colors.length)],
-    ));
   }
 
   @override
   void dispose() {
-    _pulse.dispose();
-    _particleCtrl.dispose();
     _stagger.dispose();
     super.dispose();
   }
@@ -182,588 +77,581 @@ class _LandingScreenState extends State<LandingScreen>
   // ── BUILD ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isWide = size.width > 700;
+
     return Scaffold(
-      body: Stack(
-        children: [
-          // Particles
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _particleCtrl,
-              builder: (_, __) => CustomPaint(
-                  painter: _ParticlesPainter(_particleCtrl.value, _particles)),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildNavBar(context),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(children: [
-                      _buildHero(context),
-                      const SizedBox(height: 64),
-                      _buildMetrics(context),
-                      const SizedBox(height: 64),
-                      _buildFeatures(context),
-                      const SizedBox(height: 64),
-                      _buildPdf(context),
-                      const SizedBox(height: 64),
-                      _buildCta(context),
-                      const SizedBox(height: kS32),
-                      _buildFooter(context),
-                    ]),
+      body: DotGridBackground(
+        child: Stack(
+          children: [
+            // Layer 1: Decorative oversized serif text
+            if (isWide) ...[
+              Positioned(
+                top: size.height * 0.12,
+                left: -40,
+                child: _decorativeText('Entrevista'),
+              ),
+              Positioned(
+                bottom: size.height * 0.10,
+                right: -30,
+                child: _decorativeText('Feedback'),
+              ),
+            ],
+
+            // Layer 2: Floating glass review cards
+            ..._buildFloatingCards(size, isWide),
+
+            // Layer 3: Main content
+            SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: kPagePadding, vertical: kS32),
+                          child: _buildHero(context),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                  _buildFooter(context),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // ── NAV BAR ──────────────────────────────────────────────────────────────
-  Widget _buildNavBar(BuildContext context) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: kPagePadding, vertical: 10),
-          decoration: BoxDecoration(
-            color: kBgSurface.withValues(alpha: 0.85),
-            border: const Border(bottom: BorderSide(color: kBorderSubtle)),
-          ),
-          child: Row(children: [
-            // Left buttons
-            OutlinedButton(
-              onPressed: () => context.go('/login'),
-              style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 42),
-                  padding: const EdgeInsets.symmetric(horizontal: kS20)),
-              child: const Text('Iniciar sessió'),
-            ),
-            const Spacer(),
-            // Centered logo
-            Image.asset('assets/images/logo_entrevistat.png',
-                width: 36, height: 36, fit: BoxFit.contain),
-            const Spacer(),
-            // Right button
-            ElevatedButton(
-              onPressed: () => context.go('/login?mode=register'),
-              style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(0, 42),
-                  padding: const EdgeInsets.symmetric(horizontal: kS20)),
-              child: const Text("Registra't"),
-            ),
-          ]),
-        ),
+  // ── DECORATIVE BACKGROUND TEXT ──────────────────────────────────────────
+  Widget _decorativeText(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontFamily: kFontSerif,
+        fontSize: 128,
+        fontWeight: FontWeight.w500,
+        fontStyle: FontStyle.normal,
+        color: context.colors.textPrimary.withValues(alpha: 0.03),
+        height: 1,
       ),
     );
+  }
+
+  // ── FLOATING REVIEW CARDS ──────────────────────────────────────────────
+  List<Widget> _buildFloatingCards(Size screen, bool isWide) {
+    if (!isWide) return [];
+
+    // Card positions scattered around the periphery
+    final positions = [
+      // Top-left
+      Offset(screen.width * 0.02, screen.height * 0.15),
+      // Top-right
+      Offset(screen.width * 0.72, screen.height * 0.10),
+      // Left middle
+      Offset(screen.width * 0.01, screen.height * 0.52),
+      // Right middle
+      Offset(screen.width * 0.74, screen.height * 0.48),
+      // Bottom-left
+      Offset(screen.width * 0.04, screen.height * 0.78),
+      // Bottom-right
+      Offset(screen.width * 0.70, screen.height * 0.76),
+    ];
+
+    final widths = [260.0, 280.0, 250.0, 290.0, 270.0, 260.0];
+    final opacities = [0.50, 0.60, 0.45, 0.55, 0.40, 0.65];
+
+    return List.generate(_reviews.length, (i) {
+      final review = _reviews[i];
+      final pos = positions[i];
+      return Positioned(
+        left: pos.dx,
+        top: pos.dy,
+        child: FloatingGlassCard(
+          width: widths[i],
+          delay: Duration(milliseconds: 800 + i * 600),
+          opacity: opacities[i],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 28, height: 28,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: review.color.withValues(alpha: 0.3), width: 1.5),
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/avatar_${_reviewAvatars[i]}.png',
+                        width: 28, height: 28,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(review.name, style: TextStyle(
+                    fontFamily: kFontSans, fontSize: 12,
+                    fontWeight: FontWeight.w600, color: context.colors.textPrimary,
+                  )),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(review.text, style: TextStyle(
+                fontFamily: kFontSans, fontSize: 13,
+                color: context.colors.textSecondary, height: 1.4,
+              )),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(5, (s) => Icon(
+                  s < review.stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                  size: 14,
+                  color: s < review.stars
+                      ? const Color(0xFFF59E0B)
+                      : context.colors.borderSubtle,
+                )),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   // ── HERO ─────────────────────────────────────────────────────────────────
   Widget _buildHero(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(kPagePadding, 48, kPagePadding, kS16),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 600),
       child: Column(children: [
-        _heroAnim(0, Text('Domina les teves\nentrevistes amb IA',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.displayLarge)),
+        // App name in large Gambetta serif
+        _heroAnim(0, Text(
+          "Entrevista't",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: kFontSerif,
+            fontSize: 72,
+            fontWeight: FontWeight.w500,
+            fontStyle: FontStyle.normal,
+            color: context.colors.textPrimary,
+            letterSpacing: -1,
+            height: 1.05,
+          ),
+        )),
         const SizedBox(height: kS16),
-        _heroAnim(1, Text(
-            'Practica entrevistes simulades amb intel·ligència artificial.\n'
+        _heroAnim(1, ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 512),
+          child: Text(
+            'Practica entrevistes simulades amb intel·ligència artificial. '
             'Anàlisi de veu, eye tracking i informes PDF detallats.',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: kTextSecondary, height: 1.6))),
+            style: TextStyle(
+              fontFamily: kFontSans,
+              fontSize: 18,
+              fontWeight: FontWeight.w400,
+              color: context.colors.textSecondary,
+              height: 1.6,
+            ),
+          ),
+        )),
+        const SizedBox(height: kS24),
+        _heroAnim(1, const _MetricsMarquee()),
         const SizedBox(height: kS32),
         _heroAnim(2, Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton.icon(
+            // Primary CTA with hover glow
+            _PremiumButton(
               onPressed: () => context.go('/login?mode=register'),
-              icon: const Icon(Icons.play_arrow_rounded, size: 18),
-              label: const Text('Comença ara'),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white, foregroundColor: kBgBase,
-                  minimumSize: const Size(0, 48),
-                  padding: const EdgeInsets.symmetric(horizontal: kS24)),
-            ),
-            const SizedBox(width: kS12),
-            OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 48),
-                  padding: const EdgeInsets.symmetric(horizontal: kS24)),
-              child: const Text('Veure demo'),
+              label: 'Comença ara',
+              icon: Icons.play_arrow_rounded,
             ),
           ],
         )),
-        const SizedBox(height: 48),
-        _heroAnim(3, _buildShowcase()),
-      ]),
-    );
-  }
-
-  // ── SHOWCASE ─────────────────────────────────────────────────────────────
-  Widget _buildShowcase() {
-    return Container(
-      height: 300, width: double.infinity,
-      constraints: const BoxConstraints(maxWidth: 480),
-      decoration: BoxDecoration(
-        color: kBgSurface,
-        borderRadius: BorderRadius.circular(kRadiusLg),
-        border: Border.all(color: kAccent.withValues(alpha: 0.15)),
-      ),
-      child: Stack(children: [
-        Positioned.fill(child: ClipRRect(
-          borderRadius: BorderRadius.circular(kRadiusLg),
-          child: Container(decoration: BoxDecoration(
-            gradient: RadialGradient(center: Alignment.center, radius: 0.7,
-                colors: [kAccent.withValues(alpha: 0.06), kBgSurface]),
-          )),
-        )),
-        Center(child: AnimatedBuilder(
-          animation: _pulse,
-          builder: (_, __) {
-            final o = 0.4 + 0.6 * _pulse.value;
-            return Opacity(opacity: o, child: Stack(
-              alignment: Alignment.center,
-              children: [
-                _ring(140, kAccent.withValues(alpha: 0.2)),
-                _ring(90, kAccent.withValues(alpha: 0.5)),
-                CircleAvatar(radius: 28,
-                    backgroundColor: kAccent.withValues(alpha: 0.15),
-                    child: const Icon(Icons.person, color: kAccent, size: 30)),
-                _line(true), _line(false),
-              ],
-            ));
-          },
-        )),
-        Positioned(top: kS16, left: kS16,
-            child: _badge(Icons.visibility_outlined, 'Eye Tracking', kAccentTeal)),
-        Positioned(top: kS16, right: kS16, child: _liveBadge()),
-        Positioned(bottom: kS16, left: kS16,
-            child: _badge(Icons.graphic_eq_rounded, 'Anàlisi de veu', kAccentAmber)),
-        Positioned(bottom: kS16, right: kS16,
-            child: _badge(Icons.picture_as_pdf_outlined, 'Informe PDF', kAccentRose)),
-      ]),
-    );
-  }
-
-  Widget _ring(double s, Color c) => Container(width: s, height: s,
-      decoration: BoxDecoration(shape: BoxShape.circle,
-          border: Border.all(color: c, width: 1.5)));
-
-  Widget _line(bool h) => Container(
-      width: h ? 110 : 1.5, height: h ? 1.5 : 110,
-      color: kAccent.withValues(alpha: 0.4));
-
-  Widget _badge(IconData icon, String label, Color c) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-            color: kBgBase.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(kRadiusSm),
-            border: Border.all(color: c.withValues(alpha: 0.3))),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: c, size: 13), const SizedBox(width: 5),
-          Text(label, style: const TextStyle(
-              color: kTextPrimary, fontSize: 11, fontWeight: FontWeight.w500)),
-        ]),
-      );
-
-  Widget _liveBadge() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-            color: kAccentTeal.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(kRadiusPill),
-            border: Border.all(color: kAccentTeal.withValues(alpha: 0.35))),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.circle, color: kAccentTeal, size: 7),
-          const SizedBox(width: 6),
-          Text('En viu', style: TextStyle(
-              color: kAccentTeal, fontSize: 11, fontWeight: FontWeight.w600)),
-        ]),
-      );
-
-  // ── METRICS ──────────────────────────────────────────────────────────────
-  Widget _buildMetrics(BuildContext context) {
-    final videoMetrics = [
-      _Metric('Presència en càmera', '96 %', Icons.person_search_outlined, kAccentTeal,
-          "Detectem si el candidat es manté dins l'enquadrament durant tota l'entrevista."),
-      _Metric('Contacte visual', '68 %', Icons.visibility_outlined, kAccentTeal,
-          "Mesurem quan mantens la mirada cap a la càmera per transmetre seguretat."),
-      _Metric('Alertes de desconnexió', '3', Icons.warning_amber_rounded, kAccentAmber,
-          "Detecció en temps real de quan apartes la mirada: possible lectura de notes o distraccions."),
-      _Metric('Calma i concentració', '82 %', Icons.self_improvement_rounded, kAccentSky,
-          "Temps que el candidat es manté professional i serè sota pressió."),
-      _Metric('Empatia i positivisme', '71 %', Icons.sentiment_satisfied_alt_rounded, kAccentTeal,
-          "Temps mostrant actitud afable, somriures o recepció positiva. Mesura habilitats toves."),
-      _Metric('Tensió detectada', '12 %', Icons.mood_bad_outlined, kAccentRose,
-          "Pics d'estrès detectats: arrufar el front, rigidesa facial o signes de nerviosisme."),
-      _Metric('Intensitat expressiva', '65 %', Icons.face_retouching_natural_rounded, kAccentAmber,
-          "Quant esforç facial fa el candidat per comunicar-se i emfatitzar els punts clau."),
-    ];
-
-    final audioMetrics = [
-      _Metric("Alineació amb la pregunta", '78 %', Icons.track_changes_rounded, kAccentSky,
-          "Mesura si la resposta va directa al gra o si el candidat s'allunya del tema."),
-      _Metric('Estructura del discurs', '70 %', Icons.account_tree_outlined, kAccentTeal,
-          "Avalua si les frases segueixen un fil lògic ordenat (com el mètode STAR) o són caòtiques."),
-      _Metric("Densitat d'informació", '63 %', Icons.compress_rounded, kAccentAmber,
-          "Ratio de paraules amb valor real vs. paraules buides o redundants. Detecta qui parla molt però diu poc."),
-      _Metric("Índex d'especificitat", '59 %', Icons.format_quote_rounded, kAccentRose,
-          "Mesura si el candidat usa termes específics o abusa de pronoms vagues com 'vam fer allò'."),
-      _Metric('Riquesa lèxica', '72 %', Icons.menu_book_rounded, kAccentSky,
-          "Varietat del vocabulari i domini de la terminologia professional del sector."),
-      _Metric('Seguretat i confiança', '66 %', Icons.mic_rounded, kAccentTeal,
-          "Comptabilitza silencis incòmodes i muletilles de dubte. El millor detector de nerviosisme."),
-      _Metric('Ritme de comunicació', '142 ppm', Icons.speed_rounded, kAccentAmber,
-          "Paraules per minut. Massa ràpid denota ansietat, massa lent pot avorrir l'entrevistador."),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-      child: Column(children: [
-        _ScrollReveal(child: Column(children: [
-          Text("Mètriques que t'importen",
-              style: Theme.of(context).textTheme.headlineMedium,
-              textAlign: TextAlign.center),
-          const SizedBox(height: kS8),
-          Text('Cada sessió analitza el teu rendiment en múltiples dimensions.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: kTextSecondary),
-              textAlign: TextAlign.center),
-        ])),
-
-        const SizedBox(height: kS32),
-
-        // Video section
-        _ScrollReveal(child: _metricSectionLabel(context, Icons.videocam_outlined, 'Anàlisi de vídeo')),
         const SizedBox(height: kS16),
-        _buildMetricGrid(context, videoMetrics),
-
+        _heroAnim(2, GestureDetector(
+          onTap: () => context.go('/login'),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: Text.rich(
+              TextSpan(
+                style: TextStyle(fontFamily: kFontSans, fontSize: 13,
+                  color: context.colors.textTertiary),
+                children: [
+                  const TextSpan(text: 'Ja tens compte? '),
+                  TextSpan(text: 'Inicia sessió',
+                    style: TextStyle(
+                      color: kAccent, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+        )),
         const SizedBox(height: kS32),
-
-        // Audio section
-        _ScrollReveal(child: _metricSectionLabel(context, Icons.graphic_eq_rounded, 'Anàlisi de veu i contingut')),
-        const SizedBox(height: kS16),
-        _buildMetricGrid(context, audioMetrics),
+        _heroAnim(3, _buildTrustSection()),
       ]),
     );
   }
 
-  Widget _metricSectionLabel(BuildContext context, IconData icon, String label) {
+  // ── TRUST SECTION ───────────────────────────────────────────────────────
+  Widget _buildTrustSection() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: kAccent, size: 18),
-        const SizedBox(width: kS8),
-        Text(label,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: kAccent,
-            )),
+        SizedBox(
+          width: 132, height: 40,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ...List.generate(3, (i) {
+                final colors = [kAccentTeal, kAccentSky, kAccentAmber];
+                return Positioned(
+                  left: i * 26.0,
+                  child: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors[i].withValues(alpha: 0.15),
+                      border: Border.all(color: context.colors.bgBase, width: 3),
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/avatar_${i + 1}.png',
+                        width: 34, height: 34,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              Positioned(
+                left: 2 * 26.0 + 28,
+                child: Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: context.colors.bgBase,
+                    border: Border.all(color: context.colors.borderSubtle, width: 2),
+                  ),
+                  child: Center(
+                    child: Text('+12k', style: TextStyle(
+                      fontFamily: kFontSans,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: context.colors.textSecondary,
+                    )),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text.rich(
+          TextSpan(
+            style: TextStyle(fontFamily: kFontSans, fontSize: 13, color: context.colors.textTertiary),
+            children: [
+              const TextSpan(text: 'Uneix-te a '),
+              TextSpan(text: '12.000+', style: TextStyle(
+                fontWeight: FontWeight.w600, color: context.colors.textSecondary)),
+              const TextSpan(text: ' usuaris actius'),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildMetricGrid(BuildContext context, List<_Metric> items) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final wide = constraints.maxWidth > 600;
-      final cards = items.asMap().entries.map((e) => _ScrollReveal(
-          delay: Duration(milliseconds: 80 * e.key),
-          child: _metricCard(context, e.value, constraints.maxWidth))).toList();
-      if (wide) {
-        final halfW = (constraints.maxWidth - kS16) / 2;
-        final isOdd = cards.length.isOdd;
-        return Wrap(
-          spacing: kS16,
-          runSpacing: kS16,
-          crossAxisAlignment: WrapCrossAlignment.start,
-          children: cards.asMap().entries.map((e) => SizedBox(
-              width: (isOdd && e.key == cards.length - 1)
-                  ? constraints.maxWidth
-                  : halfW,
-              child: e.value)).toList(),
-        );
-      }
-      return Column(children: cards);
-    });
-  }
+  // ── FOOTER ───────────────────────────────────────────────────────────────
+  Widget _buildFooter(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: kPagePadding, vertical: kS16),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _footerLink('POLÍTICA DE PRIVACITAT'),
+        _footerDot(),
+        _footerLink('SUPORT'),
+        _footerDot(),
+        _footerLink('GITHUB'),
+      ],
+    ),
+  );
 
-  Widget _metricCard(BuildContext context, _Metric m, [double? parentWidth]) => Padding(
-        padding: parentWidth != null && parentWidth > 600
-            ? EdgeInsets.zero
-            : const EdgeInsets.only(bottom: kS16),
-        child: Container(
-          decoration: BoxDecoration(
-              color: kBgSurface,
-              borderRadius: BorderRadius.circular(kRadiusMd),
-              border: Border.all(color: kBorderSubtle)),
-          clipBehavior: Clip.antiAlias,
-          child: Row(children: [
-            Container(width: 3, height: 90, color: m.color),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(kS20),
-                child: Row(children: [
-                  Container(width: 48, height: 48,
-                      decoration: BoxDecoration(
-                          color: m.color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(kRadiusMd)),
-                      child: Icon(m.icon, color: m.color, size: 24)),
-                  const SizedBox(width: kS16),
-                  Expanded(child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Text(m.label, style: Theme.of(context).textTheme.titleSmall),
-                        const Spacer(),
-                        Text(m.value, style: TextStyle(
-                            color: m.color, fontWeight: FontWeight.w700, fontSize: 16)),
-                      ]),
-                      const SizedBox(height: kS4),
-                      Text(m.desc, style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  )),
-                ]),
-              ),
-            ),
-          ]),
+  Widget _footerLink(String text) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: GestureDetector(
+      onTap: () {},
+      child: Text(
+        text,
+        style: TextStyle(
+          fontFamily: kFontSans,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: context.colors.textTertiary,
+          letterSpacing: 2.0,
         ),
-      );
+      ),
+    ),
+  );
 
-  // ── FEATURES ─────────────────────────────────────────────────────────────
-  Widget _buildFeatures(BuildContext context) {
-    final items = [
-      _Feat(Icons.smart_toy_outlined, 'Entrevistes amb IA',
-          "L'IA fa d'entrevistador i adapta les preguntes al teu nivell i perfil professional.", kAccentTeal),
-      _Feat(Icons.bar_chart_rounded, 'Anàlisi en temps real',
-          'Contacte visual, velocitat de parla, paraules falca i to de veu analitzats mentre parles.', kAccentAmber),
-      _Feat(Icons.category_outlined, 'Múltiples categories',
-          'Software, màrqueting, gestió de projectes, disseny i moltes més especialitats.', kAccentRose),
-      _Feat(Icons.trending_up_rounded, 'Seguiment del progrés',
-          'Compara sessions anteriors, veu la teva evolució i estableix objectius de millora.', kAccentSky),
-    ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-      child: Column(children: [
-        _ScrollReveal(child: Column(children: [
-          Text('Funcionalitats',
-              style: Theme.of(context).textTheme.headlineMedium,
-              textAlign: TextAlign.center),
-          const SizedBox(height: kS8),
-          Text('Tot el que necessites per dominar les entrevistes.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: kTextSecondary),
-              textAlign: TextAlign.center),
-        ])),
-        const SizedBox(height: kS32),
-        LayoutBuilder(builder: (context, constraints) {
-          final cards = items.asMap().entries.map((e) => _ScrollReveal(
-              delay: Duration(milliseconds: 80 * e.key),
-              child: _featCard(context, e.value, constraints.maxWidth))).toList();
-          if (constraints.maxWidth > 600) {
-            return Wrap(
-              spacing: kS16,
-              runSpacing: kS16,
-              crossAxisAlignment: WrapCrossAlignment.start,
-              children: cards.map((c) => SizedBox(
-                  width: (constraints.maxWidth - kS16) / 2,
-                  child: c)).toList(),
-            );
-          }
-          return Column(children: cards);
-        }),
-      ]),
-    );
-  }
+  Widget _footerDot() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    child: Container(
+      width: 4, height: 4,
+      decoration: BoxDecoration(
+        color: context.colors.borderSubtle,
+        shape: BoxShape.circle,
+      ),
+    ),
+  );
+}
 
-  Widget _featCard(BuildContext context, _Feat f, [double? parentWidth]) => Padding(
-        padding: parentWidth != null && parentWidth > 600
-            ? EdgeInsets.zero
-            : const EdgeInsets.only(bottom: kS16),
-        child: Container(
-          decoration: BoxDecoration(
-              color: kBgSurface,
-              borderRadius: BorderRadius.circular(kRadiusMd),
-              border: Border.all(color: kBorderSubtle)),
-          clipBehavior: Clip.antiAlias,
-          child: Row(children: [
-            Container(width: 3, height: 90, color: f.color),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(kS20),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Container(width: 44, height: 44,
-                      decoration: BoxDecoration(
-                          color: f.color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(kRadiusMd)),
-                      child: Icon(f.icon, color: f.color, size: 22)),
-                  const SizedBox(width: kS16),
-                  Expanded(child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(f.title, style: Theme.of(context).textTheme.titleSmall),
-                      const SizedBox(height: kS4),
-                      Text(f.desc, style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  )),
-                ]),
-              ),
-            ),
-          ]),
-        ),
-      );
+// ── Premium CTA button with hover glow ──────────────────────────────────
+class _PremiumButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final String label;
+  final IconData icon;
 
-  // ── PDF SECTION ──────────────────────────────────────────────────────────
-  Widget _buildPdf(BuildContext context) => _ScrollReveal(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(kS32),
-            decoration: BoxDecoration(
-              color: kBgSurface,
-              borderRadius: BorderRadius.circular(kRadiusLg),
-              border: Border.all(color: kAccentRose.withValues(alpha: 0.2)),
-              gradient: LinearGradient(
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  colors: [kAccentRose.withValues(alpha: 0.04), kBgSurface]),
-            ),
-            child: Column(children: [
-              Container(width: 56, height: 56,
-                  decoration: BoxDecoration(
-                      color: kAccentRose.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(kRadiusMd)),
-                  child: const Icon(Icons.picture_as_pdf_outlined,
-                      color: kAccentRose, size: 28)),
-              const SizedBox(height: kS20),
-              Text('Informe PDF detallat',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  textAlign: TextAlign.center),
-              const SizedBox(height: kS12),
-              Text(
-                'Al final de cada sessió, descarrega un informe complet amb:\n'
-                'puntuació global, anàlisi de fluïdesa, contingut, estructura,\n'
-                'confiança, punts forts i recomanacions personalitzades.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: kTextSecondary, height: 1.6),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: kS24),
-              Wrap(
-                spacing: kS8, runSpacing: kS8,
-                alignment: WrapAlignment.center,
-                children: [
-                  _pdfChip(Icons.score_rounded, 'Puntuació'),
-                  _pdfChip(Icons.lightbulb_outline, 'Recomanacions'),
-                  _pdfChip(Icons.compare_arrows_rounded, 'Comparativa'),
-                ],
-              ),
-            ]),
-          ),
-        ),
-      );
+  const _PremiumButton({
+    required this.onPressed,
+    required this.label,
+    required this.icon,
+  });
 
-  Widget _pdfChip(IconData icon, String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-            color: kAccentRose.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(kRadiusPill),
-            border: Border.all(color: kAccentRose.withValues(alpha: 0.2))),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: kAccentRose, size: 14),
-          const SizedBox(width: kS4),
-          Text(label, style: const TextStyle(
-              color: kAccentRose, fontSize: 11, fontWeight: FontWeight.w600)),
-        ]),
-      );
+  @override
+  State<_PremiumButton> createState() => _PremiumButtonState();
+}
 
-  // ── CTA BANNER ───────────────────────────────────────────────────────────
-  Widget _buildCta(BuildContext context) => _ScrollReveal(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: kS32, horizontal: kS24),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(kRadiusLg),
-                gradient: LinearGradient(
-                    colors: [kAccent, kAccent.withValues(alpha: 0.7)])),
-            child: Column(children: [
-              Text('Preparat per la teva\npròxima entrevista?',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: kS12),
-              Text("Registra't gratuïtament i comença a practicar avui.",
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.8)),
-                  textAlign: TextAlign.center),
-              const SizedBox(height: kS24),
-              AnimatedBuilder(
-                animation: _pulse,
-                builder: (_, child) {
-                  final blur = 8.0 + 12.0 * _pulse.value;
-                  return Container(
+class _PremiumButtonState extends State<_PremiumButton> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: GestureDetector(
+        onTap: widget.onPressed,
+        child: AnimatedContainer(
+          duration: kDurationFast,
+          curve: kCurveHover,
+          transform: Matrix4.identity()..scale(_hovering ? 1.02 : 1.0),
+          transformAlignment: Alignment.center,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Background glow (visible on hover)
+              Positioned(
+                top: -2, left: -2, right: -2, bottom: -2,
+                child: AnimatedOpacity(
+                  opacity: _hovering ? 1.0 : 0.0,
+                  duration: kDurationFast,
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(kRadiusMd),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          blurRadius: blur,
-                          spreadRadius: 1,
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(kRadiusFull),
+                      gradient: context.colors.gradientCtaGlow,
                     ),
-                    child: child,
-                  );
-                },
-                child: ElevatedButton(
-                  onPressed: () => context.go('/login?mode=register'),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white, foregroundColor: kAccent,
-                      minimumSize: const Size(0, 48),
-                      padding: const EdgeInsets.symmetric(horizontal: kS32)),
-                  child: const Text('Comença ara'),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(kRadiusFull),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ]),
+              // Button
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                decoration: BoxDecoration(
+                  color: _hovering ? Colors.black : context.colors.textPrimary,
+                  borderRadius: BorderRadius.circular(kRadiusFull),
+                  boxShadow: _hovering
+                      ? [BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 50, offset: const Offset(0, 25),
+                        )]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(widget.icon,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1A1A1A)
+                          : Colors.white,
+                      size: 18),
+                    const SizedBox(width: 12),
+                    Text(widget.label, style: TextStyle(
+                      fontFamily: kFontSans,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1A1A1A)
+                          : Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    )),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
+}
 
-  // ── FOOTER ───────────────────────────────────────────────────────────────
-  Widget _buildFooter(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: kPagePadding, vertical: kS16),
-        decoration: const BoxDecoration(
-          color: kBgSurface,
-          border: Border(top: BorderSide(color: kBorderSubtle)),
+// ── Metrics marquee ──────────────────────────────────────────────────────
+class _MetricsMarquee extends StatefulWidget {
+  const _MetricsMarquee();
+
+  @override
+  State<_MetricsMarquee> createState() => _MetricsMarqueeState();
+}
+
+class _MetricsMarqueeState extends State<_MetricsMarquee>
+    with SingleTickerProviderStateMixin {
+  static const _metrics = [
+    ('🎯', 'Rellevància de resposta'),
+    ('🧠', 'Coherència del discurs'),
+    ('📊', 'Densitat d\'informació'),
+    ('🔍', 'Índex d\'especificitat'),
+    ('📚', 'Riquesa lèxica'),
+    ('💪', 'Índex de confiança'),
+    ('🗣️', 'Ritme comunicatiu'),
+    ('😊', 'Distribució emocional'),
+    ('🎭', 'Emoció dominant'),
+    ('⚖️', 'Estabilitat emocional'),
+  ];
+
+  static const _chipHPad = 14.0;
+  static const _chipGap = 12.0;
+  static const _emojiSize = 13.0;
+  static const _textSize = 12.0;
+  static const _emojiGap = 6.0;
+
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 60),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  List<Widget> _buildChips(BuildContext context) {
+    return _metrics.map((m) {
+      return Container(
+        margin: const EdgeInsets.only(right: _chipGap),
+        padding: const EdgeInsets.symmetric(horizontal: _chipHPad, vertical: 6),
+        decoration: BoxDecoration(
+          color: context.colors.borderSubtle.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(kRadiusFull),
         ),
-        child: Row(children: [
-          Image.asset('assets/images/logo_entrevistat.png',
-              width: 24, height: 24, fit: BoxFit.contain),
-          const SizedBox(width: kS8),
-          Text("Entrevista't",
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: kTextSecondary, fontWeight: FontWeight.w600)),
-          const Spacer(),
-          Text("© ${DateTime.now().year} Entrevista't",
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: kTextDisabled)),
-        ]),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(m.$1, style: const TextStyle(fontSize: _emojiSize)),
+            const SizedBox(width: _emojiGap),
+            Text(m.$2, style: TextStyle(
+              fontFamily: kFontSans,
+              fontSize: _textSize,
+              fontWeight: FontWeight.w500,
+              color: context.colors.textSecondary,
+            )),
+          ],
+        ),
       );
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = _buildChips(context);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 500),
+      child: ClipRect(
+        child: SizedBox(
+          height: 36,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return AnimatedBuilder(
+                animation: _ctrl,
+                builder: (_, __) {
+                  return _MarqueeContent(
+                    progress: _ctrl.value,
+                    chips: chips,
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-// ── Data classes ───────────────────────────────────────────────────────────
-class _Feat {
-  final IconData icon; final String title, desc; final Color color;
-  const _Feat(this.icon, this.title, this.desc, this.color);
+class _MarqueeContent extends StatelessWidget {
+  const _MarqueeContent({
+    required this.progress,
+    required this.chips,
+  });
+
+  final double progress;
+  final List<Widget> chips;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomSingleChildLayout(
+      delegate: _MarqueeLayoutDelegate(progress),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [...chips, ...chips],
+      ),
+    );
+  }
 }
 
-class _Metric {
-  final String label, value, desc; final IconData icon; final Color color;
-  const _Metric(this.label, this.value, this.icon, this.color, this.desc);
+class _MarqueeLayoutDelegate extends SingleChildLayoutDelegate {
+  _MarqueeLayoutDelegate(this.progress);
+  final double progress;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      const BoxConstraints();
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final halfWidth = childSize.width / 2;
+    return Offset(-progress * halfWidth, 0);
+  }
+
+  @override
+  bool shouldRelayout(_MarqueeLayoutDelegate old) =>
+      old.progress != progress;
+}
+
+// ── Data class ───────────────────────────────────────────────────────────
+class _Review {
+  final String name, text;
+  final int stars;
+  final Color color;
+  const _Review(this.name, this.text, this.stars, this.color);
 }

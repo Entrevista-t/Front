@@ -43,7 +43,7 @@ class AppLabel extends StatelessWidget {
     return Text(
       text,
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: color ?? kTextSecondary,
+        color: color ?? context.colors.textSecondary,
       ),
     );
   }

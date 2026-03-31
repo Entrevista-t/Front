@@ -8,6 +8,8 @@ import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_theme.dart' show kFontSerif;
+import '../widgets/dot_grid_background.dart';
 
 
 class InterviewScreen extends StatefulWidget {
@@ -50,6 +52,9 @@ class _InterviewScreenState extends State<InterviewScreen>
     "Situa't en un lloc ben il·luminat.",
     'No surtis del marc de la càmera, podria afectar la teva avaluació.',
   ];
+
+  static const _readyHint =
+      'Prem el botó de gravació quan estiguis a punt i comença a parlar.';
 
   @override
   void initState() {
@@ -181,175 +186,209 @@ class _InterviewScreenState extends State<InterviewScreen>
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: _recording ? null : () => context.go('/home'),
-          color: _recording ? kTextDisabled : null,
+          color: _recording ? context.colors.textDisabled : null,
         ),
         title: Text(_displayName),
         actions: const [],
       ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: kS24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── Question (prominent, centered, card treatment) ───────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: Container(
-                      padding: const EdgeInsets.all(kS24),
-                      decoration: BoxDecoration(
-                        color: kBgSurface,
-                        borderRadius: BorderRadius.circular(kRadiusMd),
-                        border: Border.all(color: kBorderSubtle),
-                      ),
-                      child: Text(
-                        question.text,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 24,
+      body: DotGridBackground(
+        child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(vertical: kS24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── Question (prominent, centered, card treatment) ───────
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: Container(
+                          padding: const EdgeInsets.all(kS24),
+                          decoration: BoxDecoration(
+                            color: context.colors.bgSurface,
+                            borderRadius: BorderRadius.circular(kRadiusMd),
+                            border: Border.all(color: context.colors.borderSubtle),
+                          ),
+                          child: Text(
+                            question.text,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontFamily: kFontSerif,
+                              fontWeight: FontWeight.w600,
+                              fontStyle: FontStyle.normal,
+                              fontSize: 26,
+                              height: 1.3,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: kS24),
+                    const SizedBox(height: kS24),
 
-                // ── Camera preview with overlaid info ──────────────────────
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 560),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                      child: AnimatedBuilder(
-                        animation: _borderPulseCtrl,
-                        builder: (context, child) {
-                          final borderColor = _recording
-                              ? Color.lerp(
-                                  kErrorRed.withValues(alpha: 0.3),
-                                  kErrorRed,
-                                  _borderPulseCtrl.value,
-                                )!
-                              : kBorderSubtle;
-                          return Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(kRadiusMd + 3),
-                              border: Border.all(
-                                color: borderColor,
-                                width: _recording ? 3.0 : 1.0,
-                              ),
-                            ),
-                            child: child,
-                          );
-                        },
-                        child: AspectRatio(
-                          aspectRatio: 16 / 9,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(kRadiusMd),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                Container(
-                                  color: kBgElevated,
-                                  child: (_camera != null && _camera!.value.isInitialized)
-                                      ? CameraPreview(_camera!)
-                                      : _buildNoCameraPlaceholder(),
+                    // ── Camera preview with overlaid info ──────────────────────
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                          child: AnimatedBuilder(
+                            animation: _borderPulseCtrl,
+                            builder: (context, child) {
+                              final borderColor = _recording
+                                  ? Color.lerp(
+                                      kErrorRed.withValues(alpha: 0.3),
+                                      kErrorRed,
+                                      _borderPulseCtrl.value,
+                                    )!
+                                  : context.colors.borderSubtle;
+                              return Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(kRadiusMd + 3),
+                                  border: Border.all(
+                                    color: borderColor,
+                                    width: _recording ? 3.0 : 1.0,
+                                  ),
                                 ),
+                                child: child,
+                              );
+                            },
+                            child: AspectRatio(
+                              aspectRatio: 16 / 9,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(kRadiusMd),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    Container(
+                                      color: context.colors.bgElevated,
+                                      child: (_camera != null && _camera!.value.isInitialized)
+                                          ? CameraPreview(_camera!)
+                                          : _buildNoCameraPlaceholder(),
+                                    ),
 
-                                // Info overlay with frosted glass (fades out on record)
-                                AnimatedOpacity(
-                                  opacity: _recording ? 0.0 : 1.0,
-                                  duration: const Duration(milliseconds: 400),
-                                  curve: Curves.easeOut,
-                                  child: IgnorePointer(
-                                    ignoring: _recording,
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(kRadiusMd),
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                                        child: Container(
-                                          color: kBgBase.withValues(alpha: 0.88),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: kS32, vertical: kS24),
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: [
-                                              Icon(Icons.info_outline_rounded,
-                                                  color: kAccentSky, size: 28),
-                                              const SizedBox(height: kS16),
-                                              ..._infoBullets.map((text) => Padding(
-                                                padding: const EdgeInsets.only(bottom: kS12),
-                                                child: Text(text,
-                                                  textAlign: TextAlign.center,
-                                                  style: Theme.of(context)
-                                                      .textTheme.bodyMedium?.copyWith(
-                                                    color: kAccentSky,
-                                                    fontWeight: FontWeight.w700,
-                                                    fontSize: 15,
-                                                    height: 1.4,
-                                                  ),
+                                    // Info overlay with frosted glass (fades out on record)
+                                    AnimatedOpacity(
+                                      opacity: _recording ? 0.0 : 1.0,
+                                      duration: const Duration(milliseconds: 400),
+                                      curve: Curves.easeOut,
+                                      child: IgnorePointer(
+                                        ignoring: _recording,
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(kRadiusMd),
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(sigmaX: kBlurGlass, sigmaY: kBlurGlass),
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    const Color(0xFF3B82F6).withValues(alpha: 0.85),
+                                                    const Color(0xFF1E40AF).withValues(alpha: 0.90),
+                                                  ],
                                                 ),
-                                              )),
-                                            ],
+                                              ),
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: kS24, vertical: kS16),
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  const Icon(Icons.info_outline_rounded,
+                                                      color: Colors.white, size: 24),
+                                                  const SizedBox(height: kS8),
+                                                  ..._infoBullets.map((text) => Padding(
+                                                    padding: const EdgeInsets.only(bottom: kS8),
+                                                    child: Text(text,
+                                                      textAlign: TextAlign.center,
+                                                      style: Theme.of(context)
+                                                          .textTheme.bodyMedium?.copyWith(
+                                                        color: Colors.white.withValues(alpha: 0.9),
+                                                        fontWeight: FontWeight.w400,
+                                                        fontSize: 13,
+                                                        height: 1.3,
+                                                      ),
+                                                    ),
+                                                  )),
+                                                  const SizedBox(height: kS4),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(
+                                                        horizontal: kS12, vertical: kS4),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white.withValues(alpha: 0.15),
+                                                      borderRadius: BorderRadius.circular(kRadiusFull),
+                                                    ),
+                                                    child: Text(_readyHint,
+                                                      textAlign: TextAlign.center,
+                                                      style: Theme.of(context)
+                                                          .textTheme.bodyMedium?.copyWith(
+                                                        color: Colors.white,
+                                                        fontWeight: FontWeight.w600,
+                                                        fontSize: 12,
+                                                        height: 1.3,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
 
-                const SizedBox(height: kS8),
+                    const SizedBox(height: kS8),
 
-                // ── Timer (below camera) ─────────────────────────────────
-                if (_recording) Center(child: _buildTimerBadge()),
+                    // ── Timer (below camera) ─────────────────────────────────
+                    if (_recording) Center(child: _buildTimerBadge()),
 
-                if (_recording) ...[
-                  const SizedBox(height: kS8),
-                  // ── Progress bar (60s) ───────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 560),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(kRadiusMd),
-                        child: LinearProgressIndicator(
-                          value: (_elapsed.inSeconds / 60).clamp(0.0, 1.0),
-                          minHeight: 4,
-                          color: kAccent,
-                          backgroundColor: kBorderSubtle,
+                    if (_recording) ...[
+                      const SizedBox(height: kS8),
+                      // ── Progress bar (60s) ───────────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 560),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(kRadiusMd),
+                            child: LinearProgressIndicator(
+                              value: (_elapsed.inSeconds / 60).clamp(0.0, 1.0),
+                              minHeight: 4,
+                              color: kAccent,
+                              backgroundColor: context.colors.borderSubtle,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: kS8),
-                  Text(
-                    'Prem el botó per aturar i enviar',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: kErrorRed),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                      const SizedBox(height: kS8),
+                      Text(
+                        'Prem el botó per aturar i enviar',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: kErrorRed),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
 
-                const SizedBox(height: kS16),
+                    const SizedBox(height: kS16),
 
-                // ── Record button ────────────────────────────────────────
-                Center(child: _buildRecordButton()),
-              ],
+                    // ── Record button ────────────────────────────────────────
+                    Center(child: _buildRecordButton()),
+                  ],
+                ),
+              ),
             ),
-          ),
         ),
       ),
     );
@@ -374,7 +413,7 @@ class _InterviewScreenState extends State<InterviewScreen>
           _elapsedFormatted,
           style: const TextStyle(
             color: kErrorRed,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
             fontSize: 14,
             fontFeatures: [FontFeature.tabularFigures()],
           ),
@@ -424,7 +463,7 @@ class _InterviewScreenState extends State<InterviewScreen>
                 color: _recording ? kErrorRed : kAccent,
                 boxShadow: [
                   BoxShadow(
-                    color: (_recording ? kErrorRed : kAccent).withValues(alpha: 0.35),
+                    color: (_recording ? kErrorRed : kAccent).withValues(alpha: 0.2),
                     blurRadius: 16,
                     spreadRadius: 2,
                   ),
@@ -446,7 +485,7 @@ class _InterviewScreenState extends State<InterviewScreen>
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.videocam_off_outlined, size: 40, color: kTextSecondary),
+        Icon(Icons.videocam_off_outlined, size: 40, color: context.colors.textSecondary),
         const SizedBox(height: kS8),
         Text('Càmera no disponible',
             style: Theme.of(context).textTheme.bodySmall),
@@ -487,7 +526,7 @@ class _InterviewScreenState extends State<InterviewScreen>
               Text(
                 'Processant resposta...',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: kTextPrimary,
+                  color: context.colors.textPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -497,7 +536,7 @@ class _InterviewScreenState extends State<InterviewScreen>
                 child: Text(
                   step,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: kTextSecondary,
+                    color: context.colors.textSecondary,
                   ),
                 ),
               )),
@@ -517,7 +556,7 @@ class _InterviewScreenState extends State<InterviewScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.no_photography_rounded, size: 72, color: kTextSecondary),
+              Icon(Icons.no_photography_rounded, size: 72, color: context.colors.textSecondary),
               const SizedBox(height: kS24),
               const Text(
                 'Cal accés a la càmera i el micròfon',

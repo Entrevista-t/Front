@@ -78,7 +78,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBgBase,
+      backgroundColor: context.colors.bgBase,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -145,21 +145,21 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildUserCard() {
     return Container(
       decoration: BoxDecoration(
-        gradient: kGradientCardBorder,
+        gradient: context.colors.gradientCardBorder,
         borderRadius: BorderRadius.circular(kRadiusMd),
       ),
       child: Container(
         margin: const EdgeInsets.all(1),
         padding: const EdgeInsets.all(kS24),
         decoration: BoxDecoration(
-          color: kBgElevated,
+          color: context.colors.bgElevated,
           borderRadius: BorderRadius.circular(kRadiusMd),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 36,
-              backgroundColor: kAccent.withValues(alpha: 0.15),
+              backgroundColor: kAccent.withValues(alpha: 0.08),
               child: const Icon(Icons.person, color: kAccent, size: 38),
             ),
             const SizedBox(width: kS16),

@@ -153,7 +153,7 @@ class _ResultsScreenState extends State<ResultsScreen>
             padding: const EdgeInsets.only(right: kS8),
             child: Container(
               decoration: BoxDecoration(
-                color: kAccent.withValues(alpha: 0.12),
+                color: kAccent.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(kRadiusSm),
               ),
               child: IconButton(
@@ -248,7 +248,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                   CircularProgressIndicator(
                     value: animValue,
                     strokeWidth: 9,
-                    backgroundColor: kBorderSubtle,
+                    backgroundColor: context.colors.borderSubtle,
                     valueColor: AlwaysStoppedAnimation(color),
                     strokeCap: StrokeCap.round,
                   ),
@@ -339,14 +339,14 @@ class _ResultsScreenState extends State<ResultsScreen>
     final radius = BorderRadius.circular(kRadiusMd);
     return Container(
       decoration: BoxDecoration(
-        gradient: kGradientCardBorder,
+        gradient: context.colors.gradientCardBorder,
         borderRadius: radius,
       ),
       child: Container(
         margin: const EdgeInsets.all(1),
         padding: const EdgeInsets.all(kS24),
         decoration: BoxDecoration(
-          color: kBgSurface,
+          color: context.colors.bgSurface,
           borderRadius: radius,
         ),
         child: Column(
@@ -361,7 +361,7 @@ class _ResultsScreenState extends State<ResultsScreen>
             Text(
               r.aiFeedback,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: kTextSecondary, height: 1.6,
+                color: context.colors.textSecondary, height: 1.6,
               ),
             ),
           ],
@@ -396,20 +396,20 @@ class _ResultsScreenState extends State<ResultsScreen>
     return Container(
       padding: const EdgeInsets.symmetric(vertical: kS16, horizontal: kS8),
       decoration: BoxDecoration(
-        color: kBgSurface,
+        color: context.colors.bgSurface,
         borderRadius: BorderRadius.circular(kRadiusMd),
-        border: Border.all(color: kBorderSubtle),
+        border: Border.all(color: context.colors.borderSubtle),
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(kS6),
             decoration: BoxDecoration(
-              color: kAccent.withValues(alpha: 0.12),
+              color: kAccent.withValues(alpha: 0.07),
               borderRadius: BorderRadius.circular(kRadiusSm),
               boxShadow: [
                 BoxShadow(
-                  color: kAccent.withValues(alpha: 0.15),
+                  color: kAccent.withValues(alpha: 0.08),
                   blurRadius: 8,
                 ),
               ],
@@ -466,7 +466,7 @@ class _ResultsScreenState extends State<ResultsScreen>
             Container(
               padding: const EdgeInsets.all(kS8),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withValues(alpha: 0.07),
                 borderRadius: BorderRadius.circular(kRadiusSm),
               ),
               child: Icon(icon, color: color, size: 16),

@@ -69,7 +69,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               children: [
                 CircleAvatar(
                   radius: 52,
-                  backgroundColor: kAccent.withValues(alpha: 0.15),
+                  backgroundColor: kAccent.withValues(alpha: 0.08),
                   child: const Icon(Icons.person, color: kAccent, size: 56),
                 ),
                 Positioned(
@@ -87,7 +87,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         decoration: BoxDecoration(
                           color: kAccent,
                           shape: BoxShape.circle,
-                          border: Border.all(color: kBgBase, width: 2),
+                          border: Border.all(color: context.colors.bgBase, width: 2),
                         ),
                         child: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 16),
                       ),
@@ -141,7 +141,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: kTextSecondary, fontWeight: FontWeight.w600,
+          color: context.colors.textSecondary, fontWeight: FontWeight.w600,
         )),
         const SizedBox(height: kS8),
         TextFormField(
