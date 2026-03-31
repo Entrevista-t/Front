@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
-
-const _pink = Color(0xFFE91E8C);
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/app_card.dart';
+import '../widgets/app_section_header.dart';
 
 class ResultsScreen extends StatefulWidget {
   final String sessionId;
@@ -15,15 +17,67 @@ class ResultsScreen extends StatefulWidget {
   State<ResultsScreen> createState() => _ResultsScreenState();
 }
 
-class _ResultsScreenState extends State<ResultsScreen> {
+/// Total number of staggered sections for entrance animation.
+const _sectionCount = 7;
+
+class _ResultsScreenState extends State<ResultsScreen>
+    with TickerProviderStateMixin {
   InterviewResult? _result;
   bool _loading = true;
   bool _downloading = false;
 
+  // Animated score circles controller
+  late final AnimationController _scoreCtrl;
+
+  // Staggered entrance controller
+  late final AnimationController _staggerCtrl;
+  late final List<Animation<double>> _fadeAnims;
+  late final List<Animation<Offset>> _slideAnims;
+
   @override
   void initState() {
     super.initState();
+
+    _scoreCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    _staggerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600 + (_sectionCount - 1) * 100),
+    );
+
+    // Pre-build staggered intervals
+    final totalMs = 600 + (_sectionCount - 1) * 100;
+    _fadeAnims = List.generate(_sectionCount, (i) {
+      final start = (i * 100) / totalMs;
+      final end = (i * 100 + 600) / totalMs;
+      return CurvedAnimation(
+        parent: _staggerCtrl,
+        curve: Interval(start, end.clamp(0.0, 1.0), curve: kCurveEntrance),
+      );
+    });
+    _slideAnims = List.generate(_sectionCount, (i) {
+      final start = (i * 100) / totalMs;
+      final end = (i * 100 + 600) / totalMs;
+      return Tween<Offset>(
+        begin: const Offset(0, 0.08),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _staggerCtrl,
+        curve: Interval(start, end.clamp(0.0, 1.0), curve: kCurveEntrance),
+      ));
+    });
+
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scoreCtrl.dispose();
+    _staggerCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -34,6 +88,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
       setState(() { _result = InterviewResult.mock(); });
     } finally {
       setState(() { _loading = false; });
+      _scoreCtrl.forward();
+      _staggerCtrl.forward();
     }
   }
 
@@ -43,7 +99,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
       await ApiService.downloadPdf(widget.sessionId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PDF descarregat correctament'), backgroundColor: _pink),
+          const SnackBar(content: Text('PDF descarregat correctament')),
         );
       }
     } catch (e) {
@@ -57,6 +113,17 @@ class _ResultsScreenState extends State<ResultsScreen> {
     }
   }
 
+  /// Wraps a section widget with staggered fade + slide entrance.
+  Widget _entrance(int index, Widget child) {
+    return SlideTransition(
+      position: _slideAnims[index],
+      child: FadeTransition(
+        opacity: _fadeAnims[index],
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -64,8 +131,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
         body: Center(child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: _pink),
-            SizedBox(height: 16),
+            CircularProgressIndicator(),
+            SizedBox(height: kS16),
             Text('Obtenint resultats de la IA...'),
           ],
         )),
@@ -75,62 +142,55 @@ class _ResultsScreenState extends State<ResultsScreen> {
     final r = _result!;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        shadowColor: Colors.grey[200],
         leading: IconButton(
-          icon: const Icon(Icons.home_rounded, color: Colors.black87),
+          icon: const Icon(Icons.home_rounded),
           onPressed: () => context.go('/home'),
         ),
-        title: const Text('Informes', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+        title: const Text('Informe'),
         actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: _pink.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
+          Padding(
+            padding: const EdgeInsets.only(right: kS8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: kAccent.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(kRadiusSm),
+              ),
+              child: IconButton(
+                icon: _downloading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.picture_as_pdf_rounded),
+                onPressed: _downloading ? null : _downloadPdf,
+                tooltip: 'Descarregar PDF',
+              ),
             ),
-            child: const Text('Menú', style: TextStyle(color: _pink, fontWeight: FontWeight.w600, fontSize: 13)),
-          ),
-          IconButton(
-            icon: _downloading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: _pink, strokeWidth: 2))
-                : const Icon(Icons.picture_as_pdf_rounded, color: Colors.black54),
-            onPressed: _downloading ? null : _downloadPdf,
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(kPagePadding),
         children: [
-          _buildCategoryHeader(r),
-          const SizedBox(height: 20),
-          _buildPerformanceSection(r),
-          const SizedBox(height: 20),
-          _buildStrengthsWeaknessesChart(r),
-          const SizedBox(height: 20),
-          _buildAiFeedback(r),
-          const SizedBox(height: 20),
-          _buildDetailCards(r),
-          const SizedBox(height: 24),
-          _buildReportsList(r),
-          const SizedBox(height: 24),
-          ElevatedButton(
+          _entrance(0, _buildCategoryHeader(r)),
+          const SizedBox(height: kS16),
+          _entrance(1, _buildPerformanceSection(r)),
+          const SizedBox(height: kS16),
+          _entrance(2, _buildStrengthsWeaknessesChart(r)),
+          const SizedBox(height: kS16),
+          _entrance(3, _buildAiFeedback(r)),
+          const SizedBox(height: kS16),
+          _entrance(4, _buildDetailCards(r)),
+          const SizedBox(height: kS16),
+          _entrance(5, _buildReportsList(r)),
+          const SizedBox(height: kS24),
+          _entrance(6, ElevatedButton(
             onPressed: () => context.go('/home'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _pink,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-              minimumSize: const Size(double.infinity, 52),
-              elevation: 4,
-              shadowColor: _pink.withValues(alpha: 0.4),
-            ),
-            child: const Text('Nova simulació', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-          ),
-          const SizedBox(height: 8),
+            child: const Text('Nova simulació'),
+          )),
+          const SizedBox(height: kS8),
         ],
       ),
     );
@@ -139,34 +199,26 @@ class _ResultsScreenState extends State<ResultsScreen> {
   Widget _buildCategoryHeader(InterviewResult r) {
     return Row(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: _pink.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(r.categoryName, style: const TextStyle(color: _pink, fontWeight: FontWeight.w600, fontSize: 13)),
-        ),
-        const SizedBox(width: 10),
-        Text(r.formattedDate, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+        AppChip(r.categoryName),
+        const SizedBox(width: kS8),
+        Text(r.formattedDate, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }
 
   Widget _buildPerformanceSection(InterviewResult r) {
-    return _card(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Performance',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-          const SizedBox(height: 20),
+          AppSectionHeader(title: 'Rendiment'),
+          const SizedBox(height: kS24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _circleScore('Contingut', r.contentScore, const Color(0xFF4CAF50)),
-              _circleScore('Fluïdesa', r.fluencyScore, _pink),
-              _circleScore('Seguretat', r.confidenceScore, const Color(0xFF5C6BC0)),
+              _circleScore('Contingut', r.contentScore),
+              _circleScore('Fluïdesa', r.fluencyScore),
+              _circleScore('Seguretat', r.confidenceScore),
             ],
           ),
         ],
@@ -174,42 +226,54 @@ class _ResultsScreenState extends State<ResultsScreen> {
     );
   }
 
-  Widget _circleScore(String label, double value, Color color) {
-    return Column(
-      children: [
-        SizedBox(
-          width: 82, height: 82,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              CircularProgressIndicator(
-                value: value / 100,
-                strokeWidth: 9,
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation(color),
-                strokeCap: StrokeCap.round,
+  Widget _circleScore(String label, double value) {
+    final color = scoreColor(value);
+    final curved = CurvedAnimation(
+      parent: _scoreCtrl,
+      curve: Curves.easeOutCubic,
+    );
+    final tween = Tween<double>(begin: 0, end: value / 100);
+
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, child) {
+        final animValue = tween.evaluate(curved);
+        return Column(
+          children: [
+            SizedBox(
+              width: 82, height: 82,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    value: animValue,
+                    strokeWidth: 9,
+                    backgroundColor: context.colors.borderSubtle,
+                    valueColor: AlwaysStoppedAnimation(color),
+                    strokeCap: StrokeCap.round,
+                  ),
+                  Text(
+                    '${(animValue * 100).toInt()}%',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ],
               ),
-              Text(
-                '${value.toInt()}%',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500)),
-      ],
+            ),
+            const SizedBox(height: kS8),
+            Text(label, style: Theme.of(context).textTheme.labelSmall),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildStrengthsWeaknessesChart(InterviewResult r) {
-    return _card(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Strengths & Weaknesses',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-          const SizedBox(height: 20),
+          AppSectionHeader(title: 'Punts forts i febles'),
+          const SizedBox(height: kS24),
           SizedBox(
             height: 160,
             child: BarChart(
@@ -227,11 +291,13 @@ class _ResultsScreenState extends State<ResultsScreen> {
                       showTitles: true,
                       reservedSize: 28,
                       getTitlesWidget: (value, _) {
-                        const labels = ['Cont.', 'Flu.', 'Mir.', 'Str.', 'Con.'];
+                        const labels = ['Cont.', 'Fluï.', 'Mirad.', 'Estr.', 'Conf.'];
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
-                          child: Text(labels[value.toInt()],
-                              style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+                          child: Text(
+                            labels[value.toInt()],
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
                         );
                       },
                     ),
@@ -240,11 +306,11 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 borderData: FlBorderData(show: false),
                 gridData: const FlGridData(show: false),
                 barGroups: [
-                  _bar(0, r.contentScore, Colors.grey[350]!),
-                  _bar(1, r.fluencyScore, _pink),
-                  _bar(2, r.eyeContactPercent, Colors.grey[350]!),
-                  _bar(3, r.structureScore, _pink),
-                  _bar(4, r.confidenceScore, Colors.grey[350]!),
+                  _bar(0, r.contentScore),
+                  _bar(1, r.fluencyScore),
+                  _bar(2, r.eyeContactPercent),
+                  _bar(3, r.structureScore),
+                  _bar(4, r.confidenceScore),
                 ],
               ),
             ),
@@ -254,30 +320,52 @@ class _ResultsScreenState extends State<ResultsScreen> {
     );
   }
 
-  BarChartGroupData _bar(int x, double value, Color color) {
+  BarChartGroupData _bar(int x, double value) {
     return BarChartGroupData(x: x, barRods: [
       BarChartRodData(
         toY: value,
-        color: color,
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [kAccent.withValues(alpha: 0.6), kAccent],
+        ),
         width: 22,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(kRadiusSm)),
       ),
     ]);
   }
 
   Widget _buildAiFeedback(InterviewResult r) {
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            const Icon(Icons.auto_awesome_rounded, color: _pink, size: 18),
-            const SizedBox(width: 8),
-            const Text('Feedback IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-          ]),
-          const SizedBox(height: 12),
-          Text(r.aiFeedback, style: TextStyle(color: Colors.grey[600], height: 1.55, fontSize: 14)),
-        ],
+    final radius = BorderRadius.circular(kRadiusMd);
+    return Container(
+      decoration: BoxDecoration(
+        gradient: context.colors.gradientCardBorder,
+        borderRadius: radius,
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(1),
+        padding: const EdgeInsets.all(kS24),
+        decoration: BoxDecoration(
+          color: context.colors.bgSurface,
+          borderRadius: radius,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Icon(Icons.auto_awesome_rounded, color: kAccent, size: 18),
+              const SizedBox(width: kS8),
+              AppSectionHeader(title: 'Feedback IA'),
+            ]),
+            const SizedBox(height: kS12),
+            Text(
+              r.aiFeedback,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: context.colors.textSecondary, height: 1.6,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -286,111 +374,124 @@ class _ResultsScreenState extends State<ResultsScreen> {
     return Row(
       children: [
         Expanded(
-          child: _miniCard(r.wordsPerMinute.toStringAsFixed(0), 'ppm', Icons.speed_rounded, const Color(0xFF5C6BC0)),
+          child: _miniCard(r.wordsPerMinute.toStringAsFixed(0), 'ppm', Icons.speed_rounded),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: kS8),
         Expanded(
-          child: _miniCard('${r.eyeContactPercent.toStringAsFixed(0)}%', 'contacte visual', Icons.visibility_rounded, const Color(0xFF4CAF50)),
+          child: _miniCard('${r.eyeContactPercent.toStringAsFixed(0)}%', 'contacte visual', Icons.visibility_rounded),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: kS8),
         Expanded(
-          child: _miniCard('${r.excessivePauses}', 'pauses llargues', Icons.pause_rounded, Colors.orange),
+          child: _miniCard('${r.excessivePauses}', 'pauses llargues', Icons.pause_rounded),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: kS8),
         Expanded(
-          child: _miniCard('${r.fillerWordsCount}', 'paraules falca', Icons.record_voice_over_rounded, _pink),
+          child: _miniCard('${r.fillerWordsCount}', 'paraules falca', Icons.record_voice_over_rounded),
         ),
       ],
     );
   }
 
-  Widget _miniCard(String value, String label, IconData icon, Color color) {
+  Widget _miniCard(String value, String label, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      padding: const EdgeInsets.symmetric(vertical: kS16, horizontal: kS8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha: 0.08), blurRadius: 6)],
+        color: context.colors.bgSurface,
+        borderRadius: BorderRadius.circular(kRadiusMd),
+        border: Border.all(color: context.colors.borderSubtle),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(height: 6),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-          const SizedBox(height: 2),
-          Text(label, style: TextStyle(fontSize: 9, color: Colors.grey[500]), textAlign: TextAlign.center),
+          Container(
+            padding: const EdgeInsets.all(kS6),
+            decoration: BoxDecoration(
+              color: kAccent.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(kRadiusSm),
+              boxShadow: [
+                BoxShadow(
+                  color: kAccent.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Icon(icon, color: kAccent, size: 18),
+          ),
+          const SizedBox(height: kS8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: kS4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall,
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
   }
 
   Widget _buildReportsList(InterviewResult r) {
-    return _card(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Reports',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
-          const SizedBox(height: 12),
-          Divider(color: Colors.grey[200], height: 1),
-          // Strengths
+          AppSectionHeader(title: 'Resum'),
+          const SizedBox(height: kS12),
+          const Divider(),
           ...r.strengths.asMap().entries.map((e) => _reportItem(
-                'Punt Fort ${e.key + 1}',
+                'Punt fort ${e.key + 1}',
                 e.value,
-                const Color(0xFF4CAF50),
+                kScoreGood,
+                Icons.check_circle_outline_rounded,
               )),
-          // Improvements
           ...r.improvements.asMap().entries.map((e) => _reportItem(
-                'A Millorar ${e.key + 1}',
+                'A millorar ${e.key + 1}',
                 e.value,
-                _pink,
+                kScoreMid,
+                Icons.arrow_upward_rounded,
               )),
         ],
       ),
     );
   }
 
-  Widget _reportItem(String title, String subtitle, Color avatarColor) {
+  Widget _reportItem(String title, String subtitle, Color color, IconData icon) {
     return Column(
       children: [
-        const SizedBox(height: 10),
+        const SizedBox(height: kS12),
         Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: avatarColor.withValues(alpha: 0.15),
-              child: Icon(Icons.person, color: avatarColor, size: 18),
+            Container(
+              padding: const EdgeInsets.all(kS8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(kRadiusSm),
+              ),
+              child: Icon(icon, color: color, size: 16),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: kS12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  Text(subtitle, style: TextStyle(color: Colors.grey[500], fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text(title, style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: kS4),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        Divider(color: Colors.grey[200], height: 1),
+        const SizedBox(height: kS12),
+        const Divider(),
       ],
-    );
-  }
-
-  Widget _card({required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: child,
     );
   }
 }

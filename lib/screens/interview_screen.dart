@@ -1,24 +1,35 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_theme.dart' show kFontSerif;
+import '../widgets/dot_grid_background.dart';
+
 
 class InterviewScreen extends StatefulWidget {
   final String categoryId;
+  final String? categoryName;
 
-  const InterviewScreen({super.key, required this.categoryId});
+  const InterviewScreen({
+    super.key,
+    required this.categoryId,
+    this.categoryName,
+  });
 
   @override
   State<InterviewScreen> createState() => _InterviewScreenState();
 }
 
-class _InterviewScreenState extends State<InterviewScreen> {
+class _InterviewScreenState extends State<InterviewScreen>
+    with TickerProviderStateMixin {
   CameraController? _camera;
-  List<Question> _questions = [];
-  int _currentIndex = 0;
+  Question? _question;
   bool _recording = false;
   bool _loading = true;
   bool _uploading = false;
@@ -27,15 +38,49 @@ class _InterviewScreenState extends State<InterviewScreen> {
   Duration _elapsed = Duration.zero;
   Timer? _timer;
 
+  // Animation controllers
+  late final AnimationController _borderPulseCtrl;
+  late final AnimationController _dotPulseCtrl;
+  late final AnimationController _ringPulseCtrl;
+
+  String get _displayName =>
+      widget.categoryName ?? widget.categoryId;
+
+  static const _infoBullets = [
+    'Mantén la calma i respon amb naturalitat.',
+    'Intenta parlar durant aproximadament un minut.',
+    "Situa't en un lloc ben il·luminat.",
+    'No surtis del marc de la càmera, podria afectar la teva avaluació.',
+  ];
+
+  static const _readyHint =
+      'Prem el botó de gravació quan estiguis a punt i comença a parlar.';
+
   @override
   void initState() {
     super.initState();
+
+    _borderPulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+
+    _dotPulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..repeat(reverse: true);
+
+    _ringPulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+
     _init();
   }
 
   Future<void> _init() async {
     await _requestPermissions();
-    await _loadQuestions();
+    await _loadQuestion();
     await _initCamera();
   }
 
@@ -46,12 +91,14 @@ class _InterviewScreenState extends State<InterviewScreen> {
     });
   }
 
-  Future<void> _loadQuestions() async {
+  Future<void> _loadQuestion() async {
     try {
-      final q = await ApiService.getQuestions(widget.categoryId);
-      setState(() { _questions = q; });
+      final questions = await ApiService.getQuestions(widget.categoryId);
+      setState(() {
+        _question = questions.isNotEmpty ? questions.first : Question.fallback().first;
+      });
     } catch (_) {
-      setState(() { _questions = Question.fallback(); });
+      setState(() { _question = Question.fallback().first; });
     }
   }
 
@@ -100,24 +147,12 @@ class _InterviewScreenState extends State<InterviewScreen> {
       final file = await _camera!.stopVideoRecording();
       final sessionId = await ApiService.submitInterview(
         categoryId: widget.categoryId,
-        questionId: _questions[_currentIndex].id,
+        questionId: _question!.id,
         videoPath: file.path,
       );
       if (mounted) context.go('/report-sent/$sessionId');
     } catch (e) {
       setState(() { _uploading = false; _error = 'Error en enviar la gravació: $e'; });
-    }
-  }
-
-  void _nextQuestion() {
-    if (_currentIndex < _questions.length - 1) {
-      setState(() { _currentIndex++; });
-    }
-  }
-
-  void _prevQuestion() {
-    if (_currentIndex > 0) {
-      setState(() { _currentIndex--; });
     }
   }
 
@@ -130,222 +165,383 @@ class _InterviewScreenState extends State<InterviewScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _borderPulseCtrl.dispose();
+    _dotPulseCtrl.dispose();
+    _ringPulseCtrl.dispose();
     _camera?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Inicialitzant càmera...'),
-          ],
-        )),
-      );
-    }
+    if (_loading) return _buildLoading();
     if (_uploading) return _buildUploading();
     if (!_permissionsGranted) return _buildPermissionsError();
     if (_error != null) return _buildError();
 
-    final question = _questions.isEmpty ? Question.fallback().first : _questions[_currentIndex];
+    final question = _question ?? Question.fallback().first;
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: _recording ? null : () => context.go('/home'),
+          color: _recording ? context.colors.textDisabled : null,
+        ),
+        title: Text(_displayName),
+        actions: const [],
+      ),
+      body: DotGridBackground(
+        child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(vertical: kS24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── Question (prominent, centered, card treatment) ───────
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: Container(
+                          padding: const EdgeInsets.all(kS24),
+                          decoration: BoxDecoration(
+                            color: context.colors.bgSurface,
+                            borderRadius: BorderRadius.circular(kRadiusMd),
+                            border: Border.all(color: context.colors.borderSubtle),
+                          ),
+                          child: Text(
+                            question.text,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontFamily: kFontSerif,
+                              fontWeight: FontWeight.w600,
+                              fontStyle: FontStyle.normal,
+                              fontSize: 26,
+                              height: 1.3,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: kS24),
+
+                    // ── Camera preview with overlaid info ──────────────────────
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                          child: AnimatedBuilder(
+                            animation: _borderPulseCtrl,
+                            builder: (context, child) {
+                              final borderColor = _recording
+                                  ? Color.lerp(
+                                      kErrorRed.withValues(alpha: 0.3),
+                                      kErrorRed,
+                                      _borderPulseCtrl.value,
+                                    )!
+                                  : context.colors.borderSubtle;
+                              return Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(kRadiusMd + 3),
+                                  border: Border.all(
+                                    color: borderColor,
+                                    width: _recording ? 3.0 : 1.0,
+                                  ),
+                                ),
+                                child: child,
+                              );
+                            },
+                            child: AspectRatio(
+                              aspectRatio: 16 / 9,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(kRadiusMd),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    Container(
+                                      color: context.colors.bgElevated,
+                                      child: (_camera != null && _camera!.value.isInitialized)
+                                          ? CameraPreview(_camera!)
+                                          : _buildNoCameraPlaceholder(),
+                                    ),
+
+                                    // Info overlay with frosted glass (fades out on record)
+                                    AnimatedOpacity(
+                                      opacity: _recording ? 0.0 : 1.0,
+                                      duration: const Duration(milliseconds: 400),
+                                      curve: Curves.easeOut,
+                                      child: IgnorePointer(
+                                        ignoring: _recording,
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(kRadiusMd),
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(sigmaX: kBlurGlass, sigmaY: kBlurGlass),
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    const Color(0xFF3B82F6).withValues(alpha: 0.85),
+                                                    const Color(0xFF1E40AF).withValues(alpha: 0.90),
+                                                  ],
+                                                ),
+                                              ),
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: kS24, vertical: kS16),
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                mainAxisSize: MainAxisSize.min,
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  const Icon(Icons.info_outline_rounded,
+                                                      color: Colors.white, size: 24),
+                                                  const SizedBox(height: kS8),
+                                                  ..._infoBullets.map((text) => Padding(
+                                                    padding: const EdgeInsets.only(bottom: kS8),
+                                                    child: Text(text,
+                                                      textAlign: TextAlign.center,
+                                                      style: Theme.of(context)
+                                                          .textTheme.bodyMedium?.copyWith(
+                                                        color: Colors.white.withValues(alpha: 0.9),
+                                                        fontWeight: FontWeight.w400,
+                                                        fontSize: 13,
+                                                        height: 1.3,
+                                                      ),
+                                                    ),
+                                                  )),
+                                                  const SizedBox(height: kS4),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(
+                                                        horizontal: kS12, vertical: kS4),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white.withValues(alpha: 0.15),
+                                                      borderRadius: BorderRadius.circular(kRadiusFull),
+                                                    ),
+                                                    child: Text(_readyHint,
+                                                      textAlign: TextAlign.center,
+                                                      style: Theme.of(context)
+                                                          .textTheme.bodyMedium?.copyWith(
+                                                        color: Colors.white,
+                                                        fontWeight: FontWeight.w600,
+                                                        fontSize: 12,
+                                                        height: 1.3,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: kS8),
+
+                    // ── Timer (below camera) ─────────────────────────────────
+                    if (_recording) Center(child: _buildTimerBadge()),
+
+                    if (_recording) ...[
+                      const SizedBox(height: kS8),
+                      // ── Progress bar (60s) ───────────────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 560),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(kRadiusMd),
+                            child: LinearProgressIndicator(
+                              value: (_elapsed.inSeconds / 60).clamp(0.0, 1.0),
+                              minHeight: 4,
+                              color: kAccent,
+                              backgroundColor: context.colors.borderSubtle,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: kS8),
+                      Text(
+                        'Prem el botó per aturar i enviar',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: kErrorRed),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+
+                    const SizedBox(height: kS16),
+
+                    // ── Record button ────────────────────────────────────────
+                    Center(child: _buildRecordButton()),
+                  ],
+                ),
+              ),
+            ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimerBadge() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedBuilder(
+          animation: _dotPulseCtrl,
+          builder: (context, child) {
+            return Opacity(
+              opacity: 0.3 + 0.7 * _dotPulseCtrl.value,
+              child: child,
+            );
+          },
+          child: const Icon(Icons.circle, color: kErrorRed, size: 8),
+        ),
+        const SizedBox(width: kS6),
+        Text(
+          _elapsedFormatted,
+          style: const TextStyle(
+            color: kErrorRed,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecordButton() {
+    return SizedBox(
+      width: 120,
+      height: 120,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          // Camera preview
-          if (_camera != null && _camera!.value.isInitialized)
-            CameraPreview(_camera!),
-
-          // Top bar
-          Positioned(
-            top: 0, left: 0, right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: _recording ? null : () => context.go('/home'),
-                    ),
-                    if (_recording)
-                      _buildRecordingBadge()
-                    else
-                      const SizedBox(width: 48),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${_currentIndex + 1} / ${_questions.length}',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Question card
-          Positioned(
-            left: 16, right: 16, top: 110,
-            child: _buildQuestionCard(question),
-          ),
-
-          // Bottom controls
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Previous question (only when not recording)
-                    IconButton(
-                      icon: Icon(
-                        Icons.skip_previous_rounded,
-                        color: (!_recording && _currentIndex > 0) ? Colors.white : Colors.white30,
-                        size: 36,
-                      ),
-                      onPressed: (!_recording && _currentIndex > 0) ? _prevQuestion : null,
-                    ),
-
-                    // Record / Stop button
-                    GestureDetector(
-                      onTap: _recording ? _stopAndSubmit : _startRecording,
-                      child: Container(
-                        width: 76, height: 76,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _recording ? Colors.red : Colors.white,
-                          border: Border.all(color: Colors.white, width: 4),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8)],
-                        ),
-                        child: Icon(
-                          _recording ? Icons.stop_rounded : Icons.fiber_manual_record_rounded,
-                          color: _recording ? Colors.white : Colors.red,
-                          size: 38,
-                        ),
-                      ),
-                    ),
-
-                    // Next question (only when not recording)
-                    IconButton(
-                      icon: Icon(
-                        Icons.skip_next_rounded,
-                        color: (!_recording && _currentIndex < _questions.length - 1) ? Colors.white : Colors.white30,
-                        size: 36,
-                      ),
-                      onPressed: (!_recording && _currentIndex < _questions.length - 1) ? _nextQuestion : null,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Hint when not recording
+          // Pulsing ring when idle
           if (!_recording)
-            Positioned(
-              bottom: 110, left: 0, right: 0,
-              child: Center(
-                child: Text(
-                  'Prem el botó vermell per iniciar la gravació',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
-                ),
+            AnimatedBuilder(
+              animation: _ringPulseCtrl,
+              builder: (context, _) {
+                final scale = 1.0 + 0.5 * _ringPulseCtrl.value;
+                final opacity = 1.0 - _ringPulseCtrl.value;
+                return Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: kAccent.withValues(alpha: opacity * 0.5),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          GestureDetector(
+            onTap: _recording ? _stopAndSubmit : _startRecording,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _recording ? kErrorRed : kAccent,
+                boxShadow: [
+                  BoxShadow(
+                    color: (_recording ? kErrorRed : kAccent).withValues(alpha: 0.2),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Icon(
+                _recording ? Icons.stop_rounded : Icons.fiber_manual_record_rounded,
+                color: Colors.white,
+                size: 32,
               ),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecordingBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.circle, color: Colors.white, size: 9),
-          const SizedBox(width: 6),
-          Text(
-            'REC  $_elapsedFormatted',
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuestionCard(Question question) {
-    final blue = Theme.of(context).colorScheme.primary;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.93),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 12)],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  question.category.toUpperCase(),
-                  style: TextStyle(color: blue, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            question.text,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.3),
-          ),
-        ],
-      ),
+  Widget _buildNoCameraPlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.videocam_off_outlined, size: 40, color: context.colors.textSecondary),
+        const SizedBox(height: kS8),
+        Text('Càmera no disponible',
+            style: Theme.of(context).textTheme.bodySmall),
+      ],
     );
   }
 
-  Widget _buildUploading() {
+  Widget _buildLoading() {
     return const Scaffold(
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(),
-            SizedBox(height: 20),
-            Text('Processant resposta...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-            SizedBox(height: 8),
-            Text(
-              'El servidor analitza el vídeo i l\'àudio amb IA.\nAixò pot trigar uns segons.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
-            ),
+            SizedBox(height: kS16),
+            Text('Inicialitzant càmera...'),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUploading() {
+    const steps = [
+      '1. Pujant vídeo...',
+      '2. Analitzant amb IA...',
+      '3. Generant informe...',
+    ];
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(kS24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: kS24),
+              Text(
+                'Processant resposta...',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: context.colors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: kS16),
+              ...steps.map((step) => Padding(
+                padding: const EdgeInsets.only(bottom: kS4),
+                child: Text(
+                  step,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+              )),
+            ],
+          ),
         ),
       ),
     );
@@ -356,24 +552,22 @@ class _InterviewScreenState extends State<InterviewScreen> {
       appBar: AppBar(title: const Text('Entrevista')),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(kS24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.no_photography_rounded, size: 72, color: Colors.grey),
-              const SizedBox(height: 20),
+              Icon(Icons.no_photography_rounded, size: 72, color: context.colors.textSecondary),
+              const SizedBox(height: kS24),
               const Text(
                 'Cal accés a la càmera i el micròfon',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: kS8),
               const Text(
-                'Atorga els permisos necessaris per poder\nenregistrar la simulació d\'entrevista.',
+                "Atorga els permisos necessaris per poder\nenregistrar la simulació d'entrevista.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: kS24),
               FilledButton.icon(
                 onPressed: openAppSettings,
                 icon: const Icon(Icons.settings),
@@ -391,18 +585,18 @@ class _InterviewScreenState extends State<InterviewScreen> {
       appBar: AppBar(title: const Text('Entrevista')),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(kS24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 72, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
-              const SizedBox(height: 24),
+              const Icon(Icons.error_outline, size: 72, color: kErrorRed),
+              const SizedBox(height: kS16),
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: kS24),
               FilledButton.icon(
                 onPressed: () => context.go('/home'),
                 icon: const Icon(Icons.home),
-                label: const Text('Tornar a l\'inici'),
+                label: const Text("Tornar a l'inici"),
               ),
             ],
           ),
@@ -411,3 +605,4 @@ class _InterviewScreenState extends State<InterviewScreen> {
     );
   }
 }
+

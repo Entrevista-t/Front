@@ -9,6 +9,27 @@ class ApiService {
   static const String _baseUrl = 'https://api.entrevistat.example.com';
 
   static String? _token;
+  static String? _devName;
+  static String? _devEmail;
+
+  /// Sets a fake token and user info for dev/UI testing (no API call).
+  static Future<void> devBypassLogin({
+    required String token,
+    required String name,
+    required String email,
+  }) async {
+    _token = token;
+    _devName = name;
+    _devEmail = email;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_token', token);
+    await prefs.setString('dev_user_name', name);
+    await prefs.setString('dev_user_email', email);
+  }
+
+  /// Returns the dev-bypass user name, or null if not in bypass mode.
+  static String? get devUserName => _devName;
+  static String? get devUserEmail => _devEmail;
 
   static Future<void> _loadToken() async {
     _token ??= (await SharedPreferences.getInstance()).getString('auth_token');

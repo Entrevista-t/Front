@@ -1,12 +1,9 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-const _green = Color(0xFF00D4A1);
-const _bgDark = Color(0xFF0F1117);
-const _cardDark = Color(0xFF1A1E2E);
-const _textLight = Color(0xFFE8EAF0);
-const _textMuted = Color(0xFF7B8099);
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
 
 class ReportSentScreen extends StatefulWidget {
   final String sessionId;
@@ -17,9 +14,10 @@ class ReportSentScreen extends StatefulWidget {
 }
 
 class _ReportSentScreenState extends State<ReportSentScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _anim;
   late final Animation<double> _scale;
+  late final AnimationController _particleCtrl;
   String _email = 'usuari@entrevistat.com';
 
   @override
@@ -28,6 +26,10 @@ class _ReportSentScreenState extends State<ReportSentScreen>
     _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 600))
       ..forward();
     _scale = CurvedAnimation(parent: _anim, curve: Curves.elasticOut);
+    _particleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..forward();
     _loadEmail();
   }
 
@@ -40,93 +42,95 @@ class _ReportSentScreenState extends State<ReportSentScreen>
   @override
   void dispose() {
     _anim.dispose();
+    _particleCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgDark,
       body: SafeArea(
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(horizontal: kS32),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Animated icon
-                ScaleTransition(
-                  scale: _scale,
-                  child: Container(
-                    width: 110, height: 110,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _green.withValues(alpha: 0.12),
-                      border: Border.all(color: _green.withValues(alpha: 0.4), width: 2),
-                    ),
-                    child: const Icon(Icons.mark_email_read_outlined, color: _green, size: 52),
+                SizedBox(
+                  width: 140, height: 140,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      AnimatedBuilder(
+                        animation: _particleCtrl,
+                        builder: (context, _) => CustomPaint(
+                          size: const Size(140, 140),
+                          painter: _ParticlePainter(
+                            progress: _particleCtrl.value,
+                            color: kScoreGood,
+                          ),
+                        ),
+                      ),
+                      ScaleTransition(
+                        scale: _scale,
+                        child: Container(
+                          width: 110, height: 110,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: kScoreGood.withValues(alpha: 0.1),
+                            border: Border.all(color: kScoreGood.withValues(alpha: 0.4), width: 2),
+                          ),
+                          child: const Icon(Icons.mark_email_read_outlined, color: kScoreGood, size: 52),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 36),
-                const Text(
-                  'Informe enviat!',
-                  style: TextStyle(
-                      fontSize: 28, fontWeight: FontWeight.bold, color: _textLight),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: kS32),
                 Text(
-                  'El teu informe detallat amb els resultats\nde l\'entrevista s\'ha enviat al teu correu.',
-                  style: const TextStyle(color: _textMuted, fontSize: 15, height: 1.6),
+                  'Informe enviat!',
+                  style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: kS16),
+                Text(
+                  "El teu informe detallat amb els resultats\nde l'entrevista s'ha enviat al teu correu.",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.6),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: kS16),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS12),
                   decoration: BoxDecoration(
-                    color: _cardDark,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: _green.withValues(alpha: 0.2)),
+                    color: context.colors.bgSurface,
+                    borderRadius: BorderRadius.circular(kRadiusMd),
+                    border: Border.all(color: context.colors.borderSubtle),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.email_outlined, color: _green, size: 18),
-                      const SizedBox(width: 10),
+                      const Icon(Icons.email_outlined, color: kAccent, size: 18),
+                      const SizedBox(width: kS8),
                       Flexible(
                         child: Text(_email,
-                            style: const TextStyle(
-                                color: _textLight,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
                             overflow: TextOverflow.ellipsis),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 52),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => context.go('/home'),
-                    icon: const Icon(Icons.home_rounded, size: 20),
-                    label: const Text('Tornar a l\'inici',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _green,
-                      foregroundColor: _bgDark,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
-                  ),
+                const SizedBox(height: kS48),
+                ElevatedButton.icon(
+                  onPressed: () => context.go('/home'),
+                  icon: const Icon(Icons.home_rounded, size: 20),
+                  label: const Text("Tornar a l'inici"),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: kS24),
                 TextButton(
                   onPressed: () => context.go('/results/${widget.sessionId}'),
-                  child: const Text('Veure resultats complets',
-                      style: TextStyle(color: _textMuted, fontSize: 13)),
+                  child: const Text('Veure resultats complets'),
                 ),
               ],
             ),
@@ -135,4 +139,49 @@ class _ReportSentScreenState extends State<ReportSentScreen>
       ),
     );
   }
+}
+
+class _ParticlePainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  static final List<_Particle> _particles = _generateParticles(20);
+
+  _ParticlePainter({required this.progress, required this.color});
+
+  static List<_Particle> _generateParticles(int count) {
+    final rng = Random(42);
+    return List.generate(count, (_) {
+      final angle = rng.nextDouble() * 2 * pi;
+      final speed = 0.6 + rng.nextDouble() * 0.6;
+      final size = 2.0 + rng.nextDouble() * 3.0;
+      return _Particle(angle: angle, speed: speed, size: size);
+    });
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxRadius = size.width / 2;
+    for (final p in _particles) {
+      final dist = maxRadius * progress * p.speed;
+      final opacity = (1.0 - progress).clamp(0.0, 1.0);
+      if (opacity <= 0) continue;
+      final paint = Paint()..color = color.withValues(alpha: opacity * 0.7);
+      final offset = Offset(
+        center.dx + cos(p.angle) * dist,
+        center.dy + sin(p.angle) * dist,
+      );
+      canvas.drawCircle(offset, p.size * (1.0 - progress * 0.5), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ParticlePainter old) => old.progress != progress;
+}
+
+class _Particle {
+  final double angle;
+  final double speed;
+  final double size;
+  const _Particle({required this.angle, required this.speed, required this.size});
 }

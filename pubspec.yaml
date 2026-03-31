@@ -27,3 +27,23 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/images/avatar_1.png
+    - assets/images/avatar_2.png
+    - assets/images/avatar_3.png
+    - assets/images/avatar_4.png
+    - assets/images/avatar_5.png
+    - assets/images/avatar_6.png
+    - assets/images/avatar_7.png
+    - assets/images/avatar_8.png
+    - assets/images/avatar_9.png
+  fonts:
+    - family: Gambetta
+      fonts:
+        - asset: assets/fonts/Gambetta/Gambetta-Variable.ttf
+        - asset: assets/fonts/Gambetta/Gambetta-VariableItalic.ttf
+          style: italic
+    - family: Satoshi
+      fonts:
+        - asset: assets/fonts/Satoshi/Satoshi-Variable.ttf
+        - asset: assets/fonts/Satoshi/Satoshi-VariableItalic.ttf
+          style: italic

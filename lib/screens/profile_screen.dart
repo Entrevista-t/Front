@@ -3,12 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
-
-const _green = Color(0xFF00D4A1);
-const _bgDark = Color(0xFF0F1117);
-const _cardDark = Color(0xFF1A1E2E);
-const _textLight = Color(0xFFE8EAF0);
-const _textMuted = Color(0xFF7B8099);
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/app_card.dart';
+import '../widgets/app_section_header.dart';
+import '../widgets/app_empty_state.dart';
+import '../widgets/session_tile.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,15 +17,24 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen>
+    with TickerProviderStateMixin {
   List<InterviewSession> _sessions = [];
   bool _loading = true;
   String _name = 'Usuari';
   String _email = 'usuari@entrevistat.com';
 
+  late final AnimationController _statsCtrl;
+  late final AnimationController _listCtrl;
+
   @override
   void initState() {
     super.initState();
+    _statsCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _listCtrl = AnimationController(vsync: this);
     _load();
   }
 
@@ -42,6 +51,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // sense sessions
     } finally {
       setState(() { _loading = false; });
+      _statsCtrl.forward();
+      _listCtrl
+        ..duration = Duration(milliseconds: 600 + 100 * _sessions.length)
+        ..forward();
     }
   }
 
@@ -56,41 +69,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   @override
+  void dispose() {
+    _statsCtrl.dispose();
+    _listCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgDark,
+      backgroundColor: context.colors.bgBase,
       appBar: AppBar(
-        backgroundColor: _cardDark,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: _textLight),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/home'),
         ),
-        title: const Text('Perfil',
-            style: TextStyle(color: _textLight, fontWeight: FontWeight.bold)),
+        title: const Text('Perfil'),
         actions: [
           TextButton.icon(
             onPressed: () => context.go('/profile/edit'),
-            icon: const Icon(Icons.edit_outlined, color: _green, size: 18),
-            label: const Text('Editar', style: TextStyle(color: _green, fontWeight: FontWeight.w600)),
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Editar'),
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _green))
+          ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(kPagePadding),
               children: [
                 _buildUserCard(),
-                const SizedBox(height: 20),
+                const SizedBox(height: kS16),
                 _buildStatsRow(),
-                const SizedBox(height: 28),
-                const Text('Informes passats',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _textLight)),
-                const SizedBox(height: 14),
-                if (_sessions.isEmpty) _buildEmptyState() else ..._sessions.map(_buildSessionTile),
-                const SizedBox(height: 20),
+                const SizedBox(height: kS32),
+                AppSectionHeader(title: 'Informes passats'),
+                const SizedBox(height: kS16),
+                if (_sessions.isEmpty)
+                  AppEmptyState(
+                    icon: Icons.inbox_outlined,
+                    message: 'Encara no has fet cap entrevista',
+                    buttonLabel: 'Fer la primera entrevista',
+                    onButtonTap: () => context.go('/home'),
+                  )
+                else
+                  ..._sessions.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final s = entry.value;
+                    final count = _sessions.length;
+                    final begin = count > 0 ? (i / (count + 1)) : 0.0;
+                    final end = count > 0 ? ((i + 1) / (count + 1)).clamp(0.0, 1.0) : 1.0;
+                    final interval = CurvedAnimation(
+                      parent: _listCtrl,
+                      curve: Interval(begin, end, curve: kCurveEntrance),
+                    );
+                    return FadeTransition(
+                      opacity: interval,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.15),
+                          end: Offset.zero,
+                        ).animate(interval),
+                        child: SessionTile(
+                          session: s,
+                          onTap: () => context.go('/results/${s.id}'),
+                        ),
+                      ),
+                    );
+                  }),
+                const SizedBox(height: kS24),
               ],
             ),
     );
@@ -98,48 +144,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildUserCard() {
     return Container(
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A2640), Color(0xFF1A1E2E)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _green.withValues(alpha: 0.2)),
+        gradient: context.colors.gradientCardBorder,
+        borderRadius: BorderRadius.circular(kRadiusMd),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 38,
-            backgroundColor: _green.withValues(alpha: 0.2),
-            child: const Icon(Icons.person, color: _green, size: 42),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 20, color: _textLight)),
-                const SizedBox(height: 4),
-                Text(_email, style: const TextStyle(color: _textMuted, fontSize: 13)),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _green.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _green.withValues(alpha: 0.3)),
-                  ),
-                  child: const Text('Pla gratuït',
-                      style: TextStyle(color: _green, fontSize: 11, fontWeight: FontWeight.w600)),
-                ),
-              ],
+      child: Container(
+        margin: const EdgeInsets.all(1),
+        padding: const EdgeInsets.all(kS24),
+        decoration: BoxDecoration(
+          color: context.colors.bgElevated,
+          borderRadius: BorderRadius.circular(kRadiusMd),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 36,
+              backgroundColor: kAccent.withValues(alpha: 0.08),
+              child: const Icon(Icons.person, color: kAccent, size: 38),
             ),
-          ),
-        ],
+            const SizedBox(width: kS16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_name, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: kS4),
+                  Text(_email, style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: kS12),
+                  const AppChip('Pla gratuït'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -147,96 +184,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildStatsRow() {
     return Row(
       children: [
-        Expanded(child: _statCard('${_sessions.length}', 'Sessions', Icons.videocam_outlined)),
-        const SizedBox(width: 12),
-        Expanded(child: _statCard('${_avgScore.toInt()}%', 'Puntuació\nmitja', Icons.bar_chart_rounded)),
-        const SizedBox(width: 12),
+        Expanded(child: _statCard('${_sessions.length}', 'Sessions', Icons.videocam_outlined, isNumeric: true)),
+        const SizedBox(width: kS12),
+        Expanded(child: _statCard('${_avgScore.toInt()}%', 'Puntuació\nmitja', Icons.bar_chart_rounded, isNumeric: true)),
+        const SizedBox(width: kS12),
         Expanded(child: _statCard(_bestCategory, 'Millor\ncategoria', Icons.star_outline_rounded)),
       ],
     );
   }
 
-  Widget _statCard(String value, String label, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-      decoration: BoxDecoration(
-        color: _cardDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
+  Widget _statCard(String value, String label, IconData icon, {bool isNumeric = false}) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(vertical: kS16, horizontal: kS12),
       child: Column(
         children: [
-          Icon(icon, color: _green, size: 22),
-          const SizedBox(height: 8),
-          Text(value,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 15, color: _textLight),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center),
-          const SizedBox(height: 4),
+          Icon(icon, color: kAccent, size: 20),
+          const SizedBox(height: kS8),
+          isNumeric
+              ? AnimatedBuilder(
+                  animation: _statsCtrl,
+                  builder: (_, __) {
+                    final numericPart = RegExp(r'\d+').firstMatch(value);
+                    if (numericPart == null) {
+                      return Text(value,
+                          style: Theme.of(context).textTheme.titleSmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center);
+                    }
+                    final target = int.parse(numericPart.group(0)!);
+                    final curvedProgress = kCurveEntrance.transform(_statsCtrl.value);
+                    final current = (target * curvedProgress).round();
+                    final display = value.replaceFirst(numericPart.group(0)!, '$current');
+                    return Text(display,
+                        style: Theme.of(context).textTheme.titleSmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center);
+                  },
+                )
+              : Text(value,
+                  style: Theme.of(context).textTheme.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center),
+          const SizedBox(height: kS4),
           Text(label,
-              style: const TextStyle(color: _textMuted, fontSize: 10),
+              style: Theme.of(context).textTheme.labelSmall,
               textAlign: TextAlign.center),
         ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Column(
-        children: [
-          Icon(Icons.inbox_outlined, color: _textMuted.withValues(alpha: 0.4), size: 52),
-          const SizedBox(height: 14),
-          const Text('Encara no has fet cap entrevista',
-              style: TextStyle(color: _textMuted, fontSize: 14)),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () => context.go('/interview/software'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _green,
-              foregroundColor: _bgDark,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 0,
-            ),
-            child: const Text('Fer la primera entrevista',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSessionTile(InterviewSession session) {
-    final scoreColor = session.overallScore >= 75
-        ? _green
-        : session.overallScore >= 50
-            ? Colors.orange
-            : Colors.redAccent;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: _cardDark,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: CircleAvatar(
-          backgroundColor: scoreColor.withValues(alpha: 0.15),
-          child: Text('${session.overallScore.toInt()}',
-              style: TextStyle(
-                  color: scoreColor, fontWeight: FontWeight.bold, fontSize: 13)),
-        ),
-        title: Text(session.categoryName,
-            style: const TextStyle(
-                fontWeight: FontWeight.w600, fontSize: 14, color: _textLight)),
-        subtitle: Text(session.formattedDate,
-            style: const TextStyle(color: _textMuted, fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right, color: _textMuted),
-        onTap: () => context.go('/results/${session.id}'),
       ),
     );
   }

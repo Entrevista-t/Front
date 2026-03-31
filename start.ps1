@@ -2,10 +2,10 @@
 Clear-Host
 
 # =========================================================
-# 🛠️ CONFIGURACIÓN DEL PROYECTO (Editar para cada proyecto)
+# 🛠️ CONFIGURACIÓN DEL PROYECTO
 # =========================================================
-$APP_NAME           = "Nuevo Proyecto Frontend"
-$DEV_CONTAINER_NAME = "nuevo_proyecto_hot_reload" # Debe coincidir con el container_name de docker-compose-dev.yml
+$APP_NAME           = "Flutter Entrevista't"
+$DEV_CONTAINER_NAME = "flutter_hot_reload" # Debe coincidir con el container_name de docker-compose-dev.yml
 $LOCAL_PORT         = "8080"
 $FLUTTER_VERSION    = "3.27.1" # Cambia esto si el nuevo proyecto usa otra versión
 $MAIN_ENV_VAR       = "API_URL" # La variable clave que necesitas inyectar en el build
