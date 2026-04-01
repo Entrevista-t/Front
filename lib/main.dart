@@ -7,6 +7,8 @@ import 'screens/results_screen.dart';
 import 'screens/landing_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/edit_profile_screen.dart';
+import 'screens/faq_screen.dart';
+import 'screens/privacy_policy_screen.dart';
 import 'screens/report_sent_screen.dart';
 import 'services/api_service.dart';
 import 'theme/app_theme.dart';
@@ -53,6 +55,8 @@ final _router = GoRouter(
   },
   routes: [
     GoRoute(path: '/landing', pageBuilder: (_, __) => _fadePage(const LandingScreen())),
+    GoRoute(path: '/faq', pageBuilder: (_, __) => _fadePage(const FaqScreen())),
+    GoRoute(path: '/privacy', pageBuilder: (_, __) => _fadePage(const PrivacyPolicyScreen())),
     GoRoute(
       path: '/login',
       pageBuilder: (_, state) {

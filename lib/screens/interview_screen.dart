@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +9,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart' show kFontSerif;
 import '../widgets/dot_grid_background.dart';
+import '../widgets/onboarding_dialog.dart';
 
 
 class InterviewScreen extends StatefulWidget {
@@ -46,16 +46,6 @@ class _InterviewScreenState extends State<InterviewScreen>
   String get _displayName =>
       widget.categoryName ?? widget.categoryId;
 
-  static const _infoBullets = [
-    'Mantén la calma i respon amb naturalitat.',
-    'Intenta parlar durant aproximadament un minut.',
-    "Situa't en un lloc ben il·luminat.",
-    'No surtis del marc de la càmera, podria afectar la teva avaluació.',
-  ];
-
-  static const _readyHint =
-      'Prem el botó de gravació quan estiguis a punt i comença a parlar.';
-
   @override
   void initState() {
     super.initState();
@@ -82,6 +72,17 @@ class _InterviewScreenState extends State<InterviewScreen>
     await _requestPermissions();
     await _loadQuestion();
     await _initCamera();
+    _showOnboardingIfNeeded();
+  }
+
+  Future<void> _showOnboardingIfNeeded() async {
+    if (mounted) {
+      await showOnboardingDialog(context);
+    }
+  }
+
+  void _openOnboarding() {
+    showOnboardingDialog(context);
   }
 
   Future<void> _requestPermissions() async {
@@ -226,7 +227,49 @@ class _InterviewScreenState extends State<InterviewScreen>
                       ),
                     ),
 
-                    const SizedBox(height: kS24),
+                    const SizedBox(height: kS16),
+
+                    // ── Tutorial button (hidden while recording) ─────────
+                    if (!_recording)
+                      Center(
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: _openOnboarding,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: kS16, vertical: kS8),
+                              decoration: BoxDecoration(
+                                color: kAccent.withValues(alpha: 0.10),
+                                borderRadius:
+                                    BorderRadius.circular(kRadiusFull),
+                                border: Border.all(
+                                  color: kAccent.withValues(alpha: 0.25),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.help_outline_rounded,
+                                      size: 16, color: kAccent),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Com funciona?',
+                                    style: TextStyle(
+                                      fontFamily: 'Satoshi',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: kAccent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: kS16),
 
                     // ── Camera preview with overlaid info ──────────────────────
                     Center(
@@ -267,78 +310,6 @@ class _InterviewScreenState extends State<InterviewScreen>
                                       child: (_camera != null && _camera!.value.isInitialized)
                                           ? CameraPreview(_camera!)
                                           : _buildNoCameraPlaceholder(),
-                                    ),
-
-                                    // Info overlay with frosted glass (fades out on record)
-                                    AnimatedOpacity(
-                                      opacity: _recording ? 0.0 : 1.0,
-                                      duration: const Duration(milliseconds: 400),
-                                      curve: Curves.easeOut,
-                                      child: IgnorePointer(
-                                        ignoring: _recording,
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(kRadiusMd),
-                                          child: BackdropFilter(
-                                            filter: ImageFilter.blur(sigmaX: kBlurGlass, sigmaY: kBlurGlass),
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                  colors: [
-                                                    const Color(0xFF3B82F6).withValues(alpha: 0.85),
-                                                    const Color(0xFF1E40AF).withValues(alpha: 0.90),
-                                                  ],
-                                                ),
-                                              ),
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: kS24, vertical: kS16),
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.center,
-                                                mainAxisSize: MainAxisSize.min,
-                                                crossAxisAlignment: CrossAxisAlignment.center,
-                                                children: [
-                                                  const Icon(Icons.info_outline_rounded,
-                                                      color: Colors.white, size: 24),
-                                                  const SizedBox(height: kS8),
-                                                  ..._infoBullets.map((text) => Padding(
-                                                    padding: const EdgeInsets.only(bottom: kS8),
-                                                    child: Text(text,
-                                                      textAlign: TextAlign.center,
-                                                      style: Theme.of(context)
-                                                          .textTheme.bodyMedium?.copyWith(
-                                                        color: Colors.white.withValues(alpha: 0.9),
-                                                        fontWeight: FontWeight.w400,
-                                                        fontSize: 13,
-                                                        height: 1.3,
-                                                      ),
-                                                    ),
-                                                  )),
-                                                  const SizedBox(height: kS4),
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(
-                                                        horizontal: kS12, vertical: kS4),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white.withValues(alpha: 0.15),
-                                                      borderRadius: BorderRadius.circular(kRadiusFull),
-                                                    ),
-                                                    child: Text(_readyHint,
-                                                      textAlign: TextAlign.center,
-                                                      style: Theme.of(context)
-                                                          .textTheme.bodyMedium?.copyWith(
-                                                        color: Colors.white,
-                                                        fontWeight: FontWeight.w600,
-                                                        fontSize: 12,
-                                                        height: 1.3,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
                                     ),
                                   ],
                                 ),
