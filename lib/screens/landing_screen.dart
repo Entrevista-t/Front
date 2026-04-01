@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart' show kFontSerif, kFontSans;
@@ -73,6 +74,13 @@ class _LandingScreenState extends State<LandingScreen>
   Widget _heroAnim(int i, Widget child) => SlideTransition(
         position: _heroSlides[i],
         child: FadeTransition(opacity: _heroFades[i], child: child));
+
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   // ── BUILD ────────────────────────────────────────────────────────────────
   @override
@@ -374,19 +382,19 @@ class _LandingScreenState extends State<LandingScreen>
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _footerLink('POLÍTICA DE PRIVACITAT'),
+        _footerLink('FAQ', onTap: () => context.go('/faq')),
         _footerDot(),
-        _footerLink('SUPORT'),
+        _footerLink('POLÍTICA DE PRIVACITAT', onTap: () => context.go('/privacy')),
         _footerDot(),
-        _footerLink('GITHUB'),
+        _footerLink('GITHUB', onTap: () => _launchUrl('https://github.com/Entrevista-t/')),
       ],
     ),
   );
 
-  Widget _footerLink(String text) => MouseRegion(
+  Widget _footerLink(String text, {VoidCallback? onTap}) => MouseRegion(
     cursor: SystemMouseCursors.click,
     child: GestureDetector(
-      onTap: () {},
+      onTap: onTap ?? () {},
       child: Text(
         text,
         style: TextStyle(

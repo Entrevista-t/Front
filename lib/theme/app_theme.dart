@@ -92,9 +92,6 @@ class AppTheme {
     final pillShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(kRadiusFull),
     );
-    final standardShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(kRadiusMd),
-    );
 
     // CTA button colours: dark bg in light mode, lighter surface in dark mode
     final ctaBg = isDark ? const Color(0xFFF5F5F5) : c.textPrimary;
