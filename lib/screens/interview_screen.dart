@@ -29,6 +29,8 @@ class InterviewScreen extends StatefulWidget {
 class _InterviewScreenState extends State<InterviewScreen>
     with TickerProviderStateMixin {
   CameraController? _camera;
+  List<CameraDescription> _cameras = [];
+  int _selectedCameraIndex = 0;
   Question? _question;
   bool _recording = false;
   bool _loading = true;
@@ -109,21 +111,40 @@ class _InterviewScreenState extends State<InterviewScreen>
       return;
     }
     try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
+      _cameras = await availableCameras();
+      if (_cameras.isEmpty) {
         setState(() { _loading = false; _error = "No s'ha trobat cap càmera."; });
         return;
       }
-      final front = cameras.firstWhere(
+      // Default to front camera if available
+      _selectedCameraIndex = _cameras.indexWhere(
         (c) => c.lensDirection == CameraLensDirection.front,
-        orElse: () => cameras.first,
       );
-      _camera = CameraController(front, ResolutionPreset.medium, enableAudio: true);
-      await _camera!.initialize();
+      if (_selectedCameraIndex < 0) _selectedCameraIndex = 0;
+
+      await _initCameraController(_cameras[_selectedCameraIndex]);
     } catch (e) {
       setState(() { _error = 'Error inicialitzant la càmera: $e'; });
     } finally {
       setState(() { _loading = false; });
+    }
+  }
+
+  Future<void> _initCameraController(CameraDescription description) async {
+    await _camera?.dispose();
+    _camera = CameraController(description, ResolutionPreset.medium, enableAudio: true);
+    await _camera!.initialize();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _switchCamera() async {
+    if (_cameras.length < 2 || _recording) return;
+    final nextIndex = (_selectedCameraIndex + 1) % _cameras.length;
+    try {
+      setState(() { _selectedCameraIndex = nextIndex; });
+      await _initCameraController(_cameras[nextIndex]);
+    } catch (e) {
+      setState(() { _error = 'Error canviant de càmera: $e'; });
     }
   }
 
@@ -311,6 +332,34 @@ class _InterviewScreenState extends State<InterviewScreen>
                                           ? CameraPreview(_camera!)
                                           : _buildNoCameraPlaceholder(),
                                     ),
+                                    // Camera switch button (only when >1 camera)
+                                    if (_cameras.length > 1)
+                                      Positioned(
+                                        top: 8,
+                                        right: 8,
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: InkWell(
+                                            onTap: _recording ? null : _switchCamera,
+                                            customBorder: const CircleBorder(),
+                                            child: Container(
+                                              width: 36,
+                                              height: 36,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: Colors.black.withValues(alpha: 0.45),
+                                              ),
+                                              child: Icon(
+                                                Icons.cameraswitch_rounded,
+                                                size: 18,
+                                                color: _recording
+                                                    ? Colors.white.withValues(alpha: 0.3)
+                                                    : Colors.white.withValues(alpha: 0.9),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),
