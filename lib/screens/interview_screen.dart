@@ -71,10 +71,19 @@ class _InterviewScreenState extends State<InterviewScreen>
   }
 
   Future<void> _init() async {
-    await _requestPermissions();
-    await _loadQuestion();
-    await _initCamera();
-    _showOnboardingIfNeeded();
+    try {
+      await _requestPermissions();
+      await _loadQuestion();
+      await _initCamera();
+      _showOnboardingIfNeeded();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Error inicialitzant: $e';
+        });
+      }
+    }
   }
 
   Future<void> _showOnboardingIfNeeded() async {
@@ -88,10 +97,16 @@ class _InterviewScreenState extends State<InterviewScreen>
   }
 
   Future<void> _requestPermissions() async {
-    final statuses = await [Permission.camera, Permission.microphone].request();
-    setState(() {
-      _permissionsGranted = statuses.values.every((s) => s.isGranted);
-    });
+    try {
+      final statuses = await [Permission.camera, Permission.microphone].request();
+      setState(() {
+        _permissionsGranted = statuses.values.every((s) => s.isGranted);
+      });
+    } catch (_) {
+      // permission_handler may throw on some web browsers (Safari, Linux);
+      // the browser itself will prompt when getUserMedia is called.
+      setState(() { _permissionsGranted = true; });
+    }
   }
 
   Future<void> _loadQuestion() async {
@@ -131,10 +146,20 @@ class _InterviewScreenState extends State<InterviewScreen>
   }
 
   Future<void> _initCameraController(CameraDescription description) async {
-    await _camera?.dispose();
-    _camera = CameraController(description, ResolutionPreset.medium, enableAudio: true);
-    await _camera!.initialize();
-    if (mounted) setState(() {});
+    try {
+      await _camera?.dispose();
+      final controller = CameraController(
+        description,
+        ResolutionPreset.medium,
+        enableAudio: true,
+      );
+      await controller.initialize();
+      _camera = controller;
+      if (mounted) setState(() {});
+    } catch (e) {
+      _camera = null;
+      rethrow;
+    }
   }
 
   Future<void> _switchCamera() async {
@@ -163,13 +188,19 @@ class _InterviewScreenState extends State<InterviewScreen>
 
   void _stopAndSubmit() async {
     if (!_recording) return;
+    final camera = _camera;
+    final question = _question;
+    if (camera == null || question == null) {
+      setState(() { _error = "No s'ha pogut enviar: càmera o pregunta no disponible."; });
+      return;
+    }
     _timer?.cancel();
     setState(() { _recording = false; _uploading = true; });
     try {
-      final file = await _camera!.stopVideoRecording();
+      final file = await camera.stopVideoRecording();
       final sessionId = await ApiService.submitInterview(
         categoryId: widget.categoryId,
-        questionId: _question!.id,
+        questionId: question.id,
         videoPath: file.path,
       );
       if (mounted) context.go('/report-sent/$sessionId');
@@ -611,7 +642,7 @@ class _InterviewScreenState extends State<InterviewScreen>
             children: [
               const Icon(Icons.error_outline, size: 72, color: kErrorRed),
               const SizedBox(height: kS16),
-              Text(_error!, textAlign: TextAlign.center),
+              Text(_error ?? '', textAlign: TextAlign.center),
               const SizedBox(height: kS24),
               FilledButton.icon(
                 onPressed: () => context.go('/home'),
