@@ -20,15 +20,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with TickerProviderStateMixin {
-  static const _catDescriptions = {
-    'software': 'Algorismes, arquitectura i sistemes',
-    'data': 'Anàlisi de dades i machine learning',
-    'design': 'UX/UI, prototipatge i recerca',
-    'management': 'Lideratge, àgil i planificació',
-    'marketing': 'Estratègia digital i xarxes',
-    'general': 'Competències transversals',
-  };
-
   List<InterviewCategory> _categories = [];
   List<InterviewCategory> _filteredCategories = [];
   List<InterviewSession> _recentSessions = [];
@@ -74,9 +65,7 @@ class _HomeScreenState extends State<HomeScreen>
         _filteredCategories = _allCats;
       } else {
         _filteredCategories = _allCats
-            .where((c) =>
-                c.name.toLowerCase().contains(q) ||
-                (_catDescriptions[c.id] ?? '').toLowerCase().contains(q))
+            .where((c) => c.name.toLowerCase().contains(q))
             .toList();
       }
     });
@@ -208,8 +197,8 @@ class _HomeScreenState extends State<HomeScreen>
 
                   const SizedBox(height: kS24),
 
-                  // ── Category cards (horizontally scrollable, max 3 visible) ──
-                  _buildCategoryRow(),
+                  // ── Category cards (responsive mosaic grid) ──────────
+                  _buildCategoryGrid(),
 
                   const SizedBox(height: kS32),
 
@@ -255,8 +244,8 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ── Category horizontal scroll row ───────────────────────────────────────
-  Widget _buildCategoryRow() {
+  // ── Category mosaic grid ──────────────────────────────────────────────────
+  Widget _buildCategoryGrid() {
     final cats = _filteredCategories;
     if (cats.isEmpty) {
       return Padding(
@@ -275,39 +264,34 @@ class _HomeScreenState extends State<HomeScreen>
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
       child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: AnimatedBuilder(
-            animation: _entranceCtrl,
-            builder: (context, _) {
-              return Column(
-                children: List.generate(cats.length, (i) {
-                  final cat = cats[i];
-                  final desc = _catDescriptions[cat.id] ?? '';
-                  final currentMs = _entranceCtrl.value * totalMs;
-                  final t = ((currentMs - 150.0 * i) / 400.0).clamp(0.0, 1.0);
-                  final val = kCurveEntrance.transform(t);
+        child: AnimatedBuilder(
+          animation: _entranceCtrl,
+          builder: (context, _) {
+            return Wrap(
+              spacing: kS12,
+              runSpacing: kS12,
+              alignment: WrapAlignment.center,
+              children: List.generate(cats.length, (i) {
+                final cat = cats[i];
+                final currentMs = _entranceCtrl.value * totalMs;
+                final t = ((currentMs - 150.0 * i) / 400.0).clamp(0.0, 1.0);
+                final val = kCurveEntrance.transform(t);
 
-                  return Opacity(
-                    opacity: val,
-                    child: Transform.translate(
-                      offset: Offset(0, 12.0 * (1.0 - val)),
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: kS12),
-                        child: _CategoryCard(
-                          category: cat,
-                          description: desc,
-                          onTap: () => context.go(
-                            '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
-                          ),
-                        ),
+                return Opacity(
+                  opacity: val,
+                  child: Transform.translate(
+                    offset: Offset(0, 12.0 * (1.0 - val)),
+                    child: _CategoryCard(
+                      category: cat,
+                      onTap: () => context.go(
+                        '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
                       ),
                     ),
-                  );
-                }),
-              );
-            },
-          ),
+                  ),
+                );
+              }),
+            );
+          },
         ),
       ),
     );
@@ -341,15 +325,13 @@ class _HomeScreenState extends State<HomeScreen>
 
 }
 
-// ── Category card with hover lift ───────────────────────────────────────────
+// ── Category mosaic tile with hover effect ──────────────────────────────────
 class _CategoryCard extends StatefulWidget {
   final InterviewCategory category;
-  final String description;
   final VoidCallback onTap;
 
   const _CategoryCard({
     required this.category,
-    required this.description,
     required this.onTap,
   });
 
@@ -366,56 +348,57 @@ class _CategoryCardState extends State<_CategoryCard> {
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovering = true),
       onExit: (_) => setState(() => _hovering = false),
-      child: AnimatedContainer(
-        duration: kDurationFast,
-        curve: kCurveHover,
-        decoration: BoxDecoration(
-          color: context.colors.bgSurface,
-          borderRadius: BorderRadius.circular(kRadiusMd),
-          border: Border.all(
-            color: _hovering
-                ? context.colors.textDisabled
-                : context.colors.borderStrong,
-          ),
-          boxShadow: _hovering
-              ? kShadowMd
-              : const [BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2))],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(kRadiusMd),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(kRadiusMd),
-            onTap: widget.onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: kS16,
-                vertical: kS12,
-              ),
-              child: Row(
-                children: [
-                  GlowIcon(icon: widget.category.icon, size: 36, iconSize: 20),
-                  const SizedBox(width: kS16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(widget.category.name,
-                            style: Theme.of(context).textTheme.titleSmall),
-                        if (widget.description.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(widget.description,
-                              style: Theme.of(context).textTheme.bodySmall),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: kS8),
-                  Icon(Icons.chevron_right_rounded,
-                      color: context.colors.textSecondary, size: 20),
-                ],
-              ),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: kDurationFast,
+          curve: kCurveHover,
+          width: 140,
+          padding: const EdgeInsets.symmetric(vertical: kS20, horizontal: kS8),
+          transform: _hovering
+              ? (Matrix4.identity()..scale(1.04))
+              : Matrix4.identity(),
+          transformAlignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: context.colors.glassBg,
+            borderRadius: BorderRadius.circular(kRadiusLg),
+            border: Border.all(
+              color: _hovering
+                  ? kAccent.withValues(alpha: 0.3)
+                  : context.colors.glassBorder,
             ),
+            boxShadow: _hovering
+                ? [
+                    BoxShadow(
+                      color: kAccent.withValues(alpha: 0.1),
+                      blurRadius: 16,
+                      spreadRadius: 1,
+                    ),
+                    ...kShadowMd,
+                  ]
+                : kShadowSm,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GlowIcon(
+                icon: widget.category.icon,
+                size: 52,
+                iconSize: 26,
+                glow: _hovering,
+              ),
+              const SizedBox(height: kS12),
+              Text(
+                widget.category.name,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: context.colors.textPrimary,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),
