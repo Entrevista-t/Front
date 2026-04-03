@@ -43,6 +43,8 @@ class _HomeScreenState extends State<HomeScreen>
   List<InterviewCategory> _filteredCategories = [];
   List<InterviewSession> _recentSessions = [];
   bool _loading = true;
+  bool _canScrollLeft = false;
+  bool _canScrollRight = false;
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   late final AnimationController _entranceCtrl;
@@ -67,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     _entranceCtrl = AnimationController(vsync: this);
+    _scrollController.addListener(_updateScrollArrows);
     _load();
     _searchController.addListener(_filterCategories);
   }
@@ -94,6 +97,19 @@ class _HomeScreenState extends State<HomeScreen>
       _scrollController.jumpTo(0);
     }
     _restartEntrance(_filteredCategories.length);
+  }
+
+  void _updateScrollArrows() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    final left = pos.pixels > pos.minScrollExtent + 1;
+    final right = pos.pixels < pos.maxScrollExtent - 1;
+    if (left != _canScrollLeft || right != _canScrollRight) {
+      setState(() {
+        _canScrollLeft = left;
+        _canScrollRight = right;
+      });
+    }
   }
 
   List<InterviewCategory> get _allCats =>
@@ -305,16 +321,38 @@ class _HomeScreenState extends State<HomeScreen>
                     (availableWidth - spacing * (visibleCols - 1)) /
                         visibleCols;
                 final cardHeight = cardWidth * 1.15;
-                final gridHeight = cardHeight * rows + spacing;
-                final columnExtent = cardWidth + spacing;
                 const hoverOverflow = 6.0;
+                final gridHeight =
+                    cardHeight * rows + spacing + hoverOverflow * 2;
+                final columnExtent = cardWidth + spacing;
 
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
+                // Schedule arrow state update after layout.
+                WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => _updateScrollArrows());
+
+                final showArrows = colCount > visibleCols;
+
+                return Row(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: hoverOverflow),
+                    // Left arrow
+                    if (showArrows)
+                      _GridArrow(
+                        icon: Icons.chevron_left_rounded,
+                        visible: _canScrollLeft,
+                        onTap: () => _scrollController.animateTo(
+                          (_scrollController.offset - columnExtent)
+                              .clamp(
+                                  _scrollController
+                                      .position.minScrollExtent,
+                                  _scrollController
+                                      .position.maxScrollExtent),
+                          duration: kDurationNormal,
+                          curve: kCurveEntrance,
+                        ),
+                      ),
+
+                    // Grid
+                    Expanded(
                       child: SizedBox(
                         height: gridHeight,
                         child: ScrollConfiguration(
@@ -323,7 +361,6 @@ class _HomeScreenState extends State<HomeScreen>
                           child: ListView.builder(
                             controller: _scrollController,
                             scrollDirection: Axis.horizontal,
-                            clipBehavior: Clip.none,
                             physics: _ColumnSnapScrollPhysics(
                                 columnExtent: columnExtent),
                             padding: const EdgeInsets.symmetric(
@@ -332,82 +369,79 @@ class _HomeScreenState extends State<HomeScreen>
                             itemExtent: columnExtent,
                             itemBuilder: (context, colIndex) {
                               return Column(
-                                children:
-                                    List.generate(rows, (rowIndex) {
-                                  final catIndex =
-                                      colIndex * rows + rowIndex;
-                                  if (catIndex >= cats.length) {
-                                    return SizedBox(
-                                      width: cardWidth,
-                                      height: cardHeight,
-                                    );
-                                  }
-                                  final cat = cats[catIndex];
-                                  final desc =
-                                      _catDescriptions[cat.id] ?? '';
-                                  final currentMs =
-                                      _entranceCtrl.value * totalMs;
-                                  final t = ((currentMs -
-                                              150.0 * catIndex) /
-                                          400.0)
-                                      .clamp(0.0, 1.0);
-                                  final val =
-                                      kCurveEntrance.transform(t);
+                                children: [
+                                  SizedBox(height: hoverOverflow),
+                                  ...List.generate(rows, (rowIndex) {
+                                    final catIndex =
+                                        colIndex * rows + rowIndex;
+                                    if (catIndex >= cats.length) {
+                                      return SizedBox(
+                                        width: cardWidth,
+                                        height: cardHeight,
+                                      );
+                                    }
+                                    final cat = cats[catIndex];
+                                    final desc =
+                                        _catDescriptions[cat.id] ??
+                                            '';
+                                    final currentMs =
+                                        _entranceCtrl.value * totalMs;
+                                    final t = ((currentMs -
+                                                150.0 * catIndex) /
+                                            400.0)
+                                        .clamp(0.0, 1.0);
+                                    final val =
+                                        kCurveEntrance.transform(t);
 
-                                  return Padding(
-                                    padding: EdgeInsets.only(
-                                      bottom: rowIndex < rows - 1
-                                          ? spacing
-                                          : 0,
-                                      right: spacing,
-                                    ),
-                                    child: Opacity(
-                                      opacity: val,
-                                      child: Transform.translate(
-                                        offset: Offset(
-                                            0, 12.0 * (1.0 - val)),
-                                        child: SizedBox(
-                                          width: cardWidth,
-                                          height: cardHeight,
-                                          child: _CategoryCard(
-                                            category: cat,
-                                            description: desc,
-                                            onTap: () => context.go(
-                                              '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                                    return Padding(
+                                      padding: EdgeInsets.only(
+                                        bottom: rowIndex < rows - 1
+                                            ? spacing
+                                            : 0,
+                                        right: spacing,
+                                      ),
+                                      child: Opacity(
+                                        opacity: val,
+                                        child: Transform.translate(
+                                          offset: Offset(
+                                              0, 12.0 * (1.0 - val)),
+                                          child: SizedBox(
+                                            width: cardWidth,
+                                            height: cardHeight,
+                                            child: _CategoryCard(
+                                              category: cat,
+                                              description: desc,
+                                              onTap: () => context.go(
+                                                '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                }),
+                                    );
+                                  }),
+                                ],
                               );
                             },
                           ),
                         ),
                       ),
                     ),
-                    if (colCount > visibleCols)
-                      Padding(
-                        padding: const EdgeInsets.only(top: kS4),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.swipe_rounded,
-                                size: 16,
-                                color: context.colors.textTertiary),
-                            const SizedBox(width: kS4),
-                            Text(
-                              'Llisca per veure més',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    fontSize: 12,
-                                    color: context.colors.textTertiary,
-                                  ),
-                            ),
-                          ],
+
+                    // Right arrow
+                    if (showArrows)
+                      _GridArrow(
+                        icon: Icons.chevron_right_rounded,
+                        visible: _canScrollRight,
+                        onTap: () => _scrollController.animateTo(
+                          (_scrollController.offset + columnExtent)
+                              .clamp(
+                                  _scrollController
+                                      .position.minScrollExtent,
+                                  _scrollController
+                                      .position.maxScrollExtent),
+                          duration: kDurationNormal,
+                          curve: kCurveEntrance,
                         ),
                       ),
                   ],
@@ -529,6 +563,42 @@ class _CategoryCardState extends State<_CategoryCard> {
                 ),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Arrow button for category grid navigation ──────────────────────────────
+class _GridArrow extends StatelessWidget {
+  final IconData icon;
+  final bool visible;
+  final VoidCallback onTap;
+
+  const _GridArrow({
+    required this.icon,
+    required this.visible,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: visible ? 1.0 : 0.3,
+      duration: kDurationFast,
+      child: MouseRegion(
+        cursor:
+            visible ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: GestureDetector(
+          onTap: visible ? onTap : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: kS4),
+            child: Icon(
+              icon,
+              size: 28,
+              color: context.colors.textSecondary,
+            ),
           ),
         ),
       ),

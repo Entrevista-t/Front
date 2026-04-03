@@ -6,7 +6,7 @@ import '../theme/app_theme.dart' show kFontSerif, kFontSans;
 import '../widgets/dot_grid_background.dart';
 
 /// Privacy policy page accessible from the landing footer.
-class PrivacyPolicyScreen extends StatelessWidget {
+class PrivacyPolicyScreen extends StatefulWidget {
   const PrivacyPolicyScreen({super.key});
 
   static const _sections = [
@@ -96,7 +96,69 @@ class PrivacyPolicyScreen extends StatelessWidget {
   ];
 
   @override
+  State<PrivacyPolicyScreen> createState() => _PrivacyPolicyScreenState();
+}
+
+class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen>
+    with TickerProviderStateMixin {
+  late final AnimationController _stagger;
+  late final List<Animation<double>> _fadeAnims;
+  late final List<Animation<Offset>> _slideAnims;
+
+  // +1 for the header
+  static final _totalItems = PrivacyPolicyScreen._sections.length + 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _stagger = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+
+    _fadeAnims = List.generate(_totalItems, (i) {
+      final s = (i * 0.08).clamp(0.0, 0.75);
+      final e = (s + 0.25).clamp(0.0, 1.0);
+      return CurvedAnimation(
+        parent: _stagger,
+        curve: Interval(s, e, curve: Curves.easeOut),
+      );
+    });
+
+    _slideAnims = List.generate(_totalItems, (i) {
+      final s = (i * 0.08).clamp(0.0, 0.75);
+      final e = (s + 0.25).clamp(0.0, 1.0);
+      return Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+          .animate(CurvedAnimation(
+        parent: _stagger,
+        curve: Interval(s, e, curve: Curves.easeOut),
+      ));
+    });
+  }
+
+  @override
+  void dispose() {
+    _stagger.dispose();
+    super.dispose();
+  }
+
+  void _playEntrance() {
+    if (!_stagger.isAnimating && _stagger.value == 0) {
+      _stagger.forward();
+    }
+  }
+
+  Widget _anim(int i, Widget child) => SlideTransition(
+        position: _slideAnims[i],
+        child: FadeTransition(opacity: _fadeAnims[i], child: child),
+      );
+
+  @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _playEntrance());
+
+    final sections = PrivacyPolicyScreen._sections;
+
     return Scaffold(
       body: DotGridBackground(
         child: SafeArea(
@@ -141,108 +203,170 @@ class PrivacyPolicyScreen extends StatelessWidget {
               // ── Scrollable content ─────────────────────────────────
               Expanded(
                 child: SingleChildScrollView(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: kPagePadding, vertical: kS32),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 720),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header
-                            Center(
-                              child: Column(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: kAccent.withValues(alpha: 0.10),
-                                      borderRadius:
-                                          BorderRadius.circular(kRadiusFull),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.shield_outlined,
-                                            size: 14, color: kAccent),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'PRIVACITAT',
-                                          style: TextStyle(
-                                            fontFamily: kFontSans,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: kAccent,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: kS16),
-                                  Text(
-                                    'Política de privacitat',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontFamily: kFontSerif,
-                                      fontSize: 36,
-                                      fontWeight: FontWeight.w500,
-                                      color: context.colors.textPrimary,
-                                      letterSpacing: -0.3,
-                                      height: 1.15,
-                                    ),
-                                  ),
-                                  const SizedBox(height: kS12),
-                                  Text(
-                                    'Última actualització: abril 2026',
-                                    style: TextStyle(
-                                      fontFamily: kFontSans,
-                                      fontSize: 14,
-                                      color: context.colors.textTertiary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: kS48),
-
-                            // Sections
-                            ..._sections.map((s) => Padding(
-                                  padding:
-                                      const EdgeInsets.only(bottom: kS32),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        s.title,
-                                        style: TextStyle(
-                                          fontFamily: kFontSerif,
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w500,
-                                          color: context.colors.textPrimary,
-                                          height: 1.25,
-                                        ),
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.only(top: kS32, bottom: kS48),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: kPagePadding),
+                        child: ConstrainedBox(
+                          constraints:
+                              const BoxConstraints(maxWidth: 720),
+                          child: Column(
+                            children: [
+                              // ── Header ─────────────────────────────
+                              _anim(
+                                0,
+                                Column(
+                                  children: [
+                                    Container(
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: kAccent.withValues(
+                                            alpha: 0.10),
+                                        borderRadius:
+                                            BorderRadius.circular(
+                                                kRadiusFull),
                                       ),
-                                      const SizedBox(height: kS12),
-                                      Text(
-                                        s.body,
+                                      child: Row(
+                                        mainAxisSize:
+                                            MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                              Icons.shield_outlined,
+                                              size: 14,
+                                              color: kAccent),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'PRIVACITAT',
+                                            style: TextStyle(
+                                              fontFamily: kFontSans,
+                                              fontSize: 12,
+                                              fontWeight:
+                                                  FontWeight.w600,
+                                              color: kAccent,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: kS16),
+                                    Text(
+                                      'Política de privacitat',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontFamily: kFontSerif,
+                                        fontSize: 36,
+                                        fontWeight: FontWeight.w500,
+                                        color: context
+                                            .colors.textPrimary,
+                                        letterSpacing: -0.3,
+                                        height: 1.15,
+                                      ),
+                                    ),
+                                    const SizedBox(height: kS12),
+                                    ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(
+                                              maxWidth: 480),
+                                      child: Text(
+                                        'Com recopilem, utilitzem i protegim '
+                                        'les teves dades personals.',
+                                        textAlign: TextAlign.center,
                                         style: TextStyle(
                                           fontFamily: kFontSans,
-                                          fontSize: 15,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.w400,
-                                          color: context.colors.textSecondary,
-                                          height: 1.7,
+                                          color: context
+                                              .colors.textSecondary,
+                                          height: 1.6,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                )),
+                                    ),
+                                    const SizedBox(height: kS8),
+                                    Text(
+                                      'Última actualització: abril 2026',
+                                      style: TextStyle(
+                                        fontFamily: kFontSans,
+                                        fontSize: 13,
+                                        color: context
+                                            .colors.textTertiary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: kS32),
+                                  ],
+                                ),
+                              ),
 
-                            const SizedBox(height: kS16),
-                          ],
+                              // ── Section cards ─────────────────────
+                              ...List.generate(
+                                  sections.length, (i) {
+                                final s = sections[i];
+                                return _anim(
+                                  i + 1,
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                        bottom: kS12),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding:
+                                          const EdgeInsets.all(kS20),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            context.colors.bgSurface,
+                                        borderRadius:
+                                            BorderRadius.circular(
+                                                kRadiusMd),
+                                        border: Border.all(
+                                            color: context
+                                                .colors.borderSubtle),
+                                        boxShadow: kShadowSm,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            s.title,
+                                            style: TextStyle(
+                                              fontFamily: kFontSans,
+                                              fontSize: 15,
+                                              fontWeight:
+                                                  FontWeight.w600,
+                                              color: context.colors
+                                                  .textPrimary,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                          const SizedBox(
+                                              height: kS12),
+                                          Text(
+                                            s.body,
+                                            style: TextStyle(
+                                              fontFamily: kFontSans,
+                                              fontSize: 14,
+                                              fontWeight:
+                                                  FontWeight.w400,
+                                              color: context.colors
+                                                  .textSecondary,
+                                              height: 1.6,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+
+                              const SizedBox(height: kS16),
+                            ],
+                          ),
                         ),
                       ),
                     ),
