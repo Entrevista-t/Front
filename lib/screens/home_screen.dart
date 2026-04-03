@@ -43,7 +43,9 @@ class _HomeScreenState extends State<HomeScreen>
   List<InterviewCategory> _filteredCategories = [];
   List<InterviewSession> _recentSessions = [];
   bool _loading = true;
+  int _currentPage = 0;
   final _searchController = TextEditingController();
+  final _pageController = PageController();
   late final AnimationController _entranceCtrl;
 
   String get _greeting {
@@ -74,12 +76,14 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     _entranceCtrl.dispose();
     _searchController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
   void _filterCategories() {
     final q = _searchController.text.toLowerCase().trim();
     setState(() {
+      _currentPage = 0;
       if (q.isEmpty) {
         _filteredCategories = _allCats;
       } else {
@@ -88,6 +92,9 @@ class _HomeScreenState extends State<HomeScreen>
             .toList();
       }
     });
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(0);
+    }
     _restartEntrance(_filteredCategories.length);
   }
 
@@ -263,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ── Category mosaic grid (4 columns) ──────────────────────────────────────
+  // ── Category grid (2 rows × 4 cols, horizontal snap scroll) ───────────────
   Widget _buildCategoryGrid() {
     final cats = _filteredCategories;
     if (cats.isEmpty) {
@@ -279,57 +286,118 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     final totalMs = (150 * (cats.length - 1) + 400).clamp(400, 2000);
-    const crossAxisCount = 4;
+    const cols = 4;
+    const rows = 2;
+    const pageSize = cols * rows;
     const spacing = kS16;
+    final pageCount = (cats.length / pageSize).ceil();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: AnimatedBuilder(
-            animation: _entranceCtrl,
-            builder: (context, _) {
-              return LayoutBuilder(
-                builder: (context, constraints) {
-                  final cardWidth =
-                      (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
-                          crossAxisCount;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720 + kPagePadding * 2),
+        child: AnimatedBuilder(
+          animation: _entranceCtrl,
+          builder: (context, _) {
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final availableWidth =
+                    constraints.maxWidth - kPagePadding * 2;
+                final cardWidth =
+                    (availableWidth - spacing * (cols - 1)) / cols;
+                final cardHeight = cardWidth * 1.15;
+                final gridHeight = cardHeight * rows + spacing;
 
-                  return Wrap(
-                    spacing: spacing,
-                    runSpacing: spacing,
-                    alignment: WrapAlignment.center,
-                    children: List.generate(cats.length, (i) {
-                      final cat = cats[i];
-                      final desc = _catDescriptions[cat.id] ?? '';
-                      final currentMs = _entranceCtrl.value * totalMs;
-                      final t =
-                          ((currentMs - 150.0 * i) / 400.0).clamp(0.0, 1.0);
-                      final val = kCurveEntrance.transform(t);
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: gridHeight,
+                      child: PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: (i) =>
+                            setState(() => _currentPage = i),
+                        itemCount: pageCount,
+                        itemBuilder: (context, pageIndex) {
+                          final start = pageIndex * pageSize;
+                          final end =
+                              (start + pageSize).clamp(0, cats.length);
+                          final pageCats = cats.sublist(start, end);
 
-                      return Opacity(
-                        opacity: val,
-                        child: Transform.translate(
-                          offset: Offset(0, 12.0 * (1.0 - val)),
-                          child: SizedBox(
-                            width: cardWidth,
-                            child: _CategoryCard(
-                              category: cat,
-                              description: desc,
-                              onTap: () => context.go(
-                                '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: kPagePadding),
+                            child: Wrap(
+                              spacing: spacing,
+                              runSpacing: spacing,
+                              children:
+                                  List.generate(pageCats.length, (i) {
+                                final globalIndex = start + i;
+                                final cat = pageCats[i];
+                                final desc =
+                                    _catDescriptions[cat.id] ?? '';
+                                final currentMs =
+                                    _entranceCtrl.value * totalMs;
+                                final t = ((currentMs -
+                                            150.0 * globalIndex) /
+                                        400.0)
+                                    .clamp(0.0, 1.0);
+                                final val =
+                                    kCurveEntrance.transform(t);
+
+                                return Opacity(
+                                  opacity: val,
+                                  child: Transform.translate(
+                                    offset: Offset(
+                                        0, 12.0 * (1.0 - val)),
+                                    child: SizedBox(
+                                      width: cardWidth,
+                                      height: cardHeight,
+                                      child: _CategoryCard(
+                                        category: cat,
+                                        description: desc,
+                                        onTap: () => context.go(
+                                          '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    if (pageCount > 1) ...[
+                      const SizedBox(height: kS12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(pageCount, (i) {
+                          final isActive = i == _currentPage;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4),
+                            child: AnimatedContainer(
+                              duration: kDurationFast,
+                              width: isActive ? 20 : 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                    kRadiusFull),
+                                color: isActive
+                                    ? kAccent
+                                    : context.colors.borderStrong,
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    }),
-                  );
-                },
-              );
-            },
-          ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ],
+                );
+              },
+            );
+          },
         ),
       ),
     );
