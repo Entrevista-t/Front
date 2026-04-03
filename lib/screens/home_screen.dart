@@ -340,117 +340,148 @@ class _HomeScreenState extends State<HomeScreen>
             WidgetsBinding.instance
                 .addPostFrameCallback((_) => _updateScrollArrows());
 
+            final showMobileHint =
+                !showArrows && colCount > visibleCols;
+
             return Padding(
               padding: const EdgeInsets.symmetric(
                   horizontal: kPagePadding),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Left arrow
-                  if (showArrows)
-                    _GridArrow(
-                      icon: Icons.chevron_left_rounded,
-                      visible: _canScrollLeft,
-                      onTap: () => _scrollController.animateTo(
-                        (_scrollController.offset - columnExtent)
-                            .clamp(
-                                _scrollController
-                                    .position.minScrollExtent,
-                                _scrollController
-                                    .position.maxScrollExtent),
-                        duration: kDurationNormal,
-                        curve: kCurveEntrance,
-                      ),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Left arrow
+                      if (showArrows)
+                        _GridArrow(
+                          icon: Icons.chevron_left_rounded,
+                          visible: _canScrollLeft,
+                          onTap: () => _scrollController.animateTo(
+                            (_scrollController.offset - columnExtent)
+                                .clamp(
+                                    _scrollController
+                                        .position.minScrollExtent,
+                                    _scrollController
+                                        .position.maxScrollExtent),
+                            duration: kDurationNormal,
+                            curve: kCurveEntrance,
+                          ),
+                        ),
 
-                  // Grid
-                  SizedBox(
-                    width: gridWidth,
-                    height: gridHeight,
-                    child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context)
-                          .copyWith(scrollbars: false),
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        scrollDirection: Axis.horizontal,
-                        physics: _ColumnSnapScrollPhysics(
-                            columnExtent: columnExtent,
-                            parent: const ClampingScrollPhysics()),
-                        padding: EdgeInsets.zero,
-                        itemCount: colCount,
-                        itemExtent: columnExtent,
-                        itemBuilder: (context, colIndex) {
-                          return Column(
-                            children: [
-                              SizedBox(height: hoverOverflow),
-                              ...List.generate(rows, (rowIndex) {
-                                final catIndex =
-                                    colIndex * rows + rowIndex;
-                                if (catIndex >= cats.length) {
-                                  return SizedBox(
-                                    width: cardWidth,
-                                    height: cardHeight,
-                                  );
-                                }
-                                final cat = cats[catIndex];
-                                final desc =
-                                    _catDescriptions[cat.id] ?? '';
-                                final currentMs =
-                                    _entranceCtrl.value * totalMs;
-                                final t = ((currentMs -
-                                            150.0 * catIndex) /
-                                        400.0)
-                                    .clamp(0.0, 1.0);
-                                final val =
-                                    kCurveEntrance.transform(t);
-
-                                return Padding(
-                                  padding: EdgeInsets.only(
-                                    bottom: rowIndex < rows - 1
-                                        ? spacing
-                                        : 0,
-                                  ),
-                                  child: Opacity(
-                                    opacity: val,
-                                    child: Transform.translate(
-                                      offset: Offset(
-                                          0, 12.0 * (1.0 - val)),
-                                      child: SizedBox(
+                      // Grid
+                      SizedBox(
+                        width: gridWidth,
+                        height: gridHeight,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context)
+                              .copyWith(scrollbars: false),
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            scrollDirection: Axis.horizontal,
+                            physics: _ColumnSnapScrollPhysics(
+                                columnExtent: columnExtent,
+                                parent: const ClampingScrollPhysics()),
+                            padding: EdgeInsets.zero,
+                            itemCount: colCount,
+                            itemExtent: columnExtent,
+                            itemBuilder: (context, colIndex) {
+                              return Column(
+                                children: [
+                                  SizedBox(height: hoverOverflow),
+                                  ...List.generate(rows, (rowIndex) {
+                                    final catIndex =
+                                        colIndex * rows + rowIndex;
+                                    if (catIndex >= cats.length) {
+                                      return SizedBox(
                                         width: cardWidth,
                                         height: cardHeight,
-                                        child: _CategoryCard(
-                                          category: cat,
-                                          description: desc,
-                                          onTap: () => context.go(
-                                            '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                                      );
+                                    }
+                                    final cat = cats[catIndex];
+                                    final desc =
+                                        _catDescriptions[cat.id] ?? '';
+                                    final currentMs =
+                                        _entranceCtrl.value * totalMs;
+                                    final t = ((currentMs -
+                                                150.0 * catIndex) /
+                                            400.0)
+                                        .clamp(0.0, 1.0);
+                                    final val =
+                                        kCurveEntrance.transform(t);
+
+                                    return Padding(
+                                      padding: EdgeInsets.only(
+                                        bottom: rowIndex < rows - 1
+                                            ? spacing
+                                            : 0,
+                                      ),
+                                      child: Opacity(
+                                        opacity: val,
+                                        child: Transform.translate(
+                                          offset: Offset(
+                                              0, 12.0 * (1.0 - val)),
+                                          child: SizedBox(
+                                            width: cardWidth,
+                                            height: cardHeight,
+                                            child: _CategoryCard(
+                                              category: cat,
+                                              description: desc,
+                                              onTap: () => context.go(
+                                                '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                );
-                              }),
-                            ],
-                          );
-                        },
+                                    );
+                                  }),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
 
-                  // Right arrow
-                  if (showArrows)
-                    _GridArrow(
-                      icon: Icons.chevron_right_rounded,
-                      visible: _canScrollRight,
-                      onTap: () => _scrollController.animateTo(
-                        (_scrollController.offset + columnExtent)
-                            .clamp(
-                                _scrollController
-                                    .position.minScrollExtent,
-                                _scrollController
-                                    .position.maxScrollExtent),
-                        duration: kDurationNormal,
-                        curve: kCurveEntrance,
+                      // Right arrow
+                      if (showArrows)
+                        _GridArrow(
+                          icon: Icons.chevron_right_rounded,
+                          visible: _canScrollRight,
+                          onTap: () => _scrollController.animateTo(
+                            (_scrollController.offset + columnExtent)
+                                .clamp(
+                                    _scrollController
+                                        .position.minScrollExtent,
+                                    _scrollController
+                                        .position.maxScrollExtent),
+                            duration: kDurationNormal,
+                            curve: kCurveEntrance,
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (showMobileHint)
+                    Padding(
+                      padding: const EdgeInsets.only(top: kS8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.swipe_rounded,
+                              size: 14,
+                              color: context.colors.textTertiary),
+                          const SizedBox(width: kS4),
+                          Text(
+                            'Llisca per veure més categories',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  fontSize: 12,
+                                  color: context.colors.textTertiary,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
