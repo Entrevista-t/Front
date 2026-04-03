@@ -20,6 +20,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with TickerProviderStateMixin {
+  static const _catDescriptions = {
+    'software': 'Algorismes, arquitectura i sistemes',
+    'data': 'Anàlisi de dades i machine learning',
+    'design': 'UX/UI, prototipatge i recerca',
+    'management': 'Lideratge, àgil i planificació',
+    'marketing': 'Estratègia digital i xarxes',
+    'general': 'Competències transversals',
+  };
+
   List<InterviewCategory> _categories = [];
   List<InterviewCategory> _filteredCategories = [];
   List<InterviewSession> _recentSessions = [];
@@ -244,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ── Category mosaic grid ──────────────────────────────────────────────────
+  // ── Category mosaic grid (4 columns) ──────────────────────────────────────
   Widget _buildCategoryGrid() {
     final cats = _filteredCategories;
     if (cats.isEmpty) {
@@ -260,38 +269,57 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     final totalMs = (150 * (cats.length - 1) + 400).clamp(400, 2000);
+    const crossAxisCount = 4;
+    const spacing = kS16;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
       child: Center(
-        child: AnimatedBuilder(
-          animation: _entranceCtrl,
-          builder: (context, _) {
-            return Wrap(
-              spacing: kS12,
-              runSpacing: kS12,
-              alignment: WrapAlignment.center,
-              children: List.generate(cats.length, (i) {
-                final cat = cats[i];
-                final currentMs = _entranceCtrl.value * totalMs;
-                final t = ((currentMs - 150.0 * i) / 400.0).clamp(0.0, 1.0);
-                final val = kCurveEntrance.transform(t);
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: AnimatedBuilder(
+            animation: _entranceCtrl,
+            builder: (context, _) {
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final cardWidth =
+                      (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
+                          crossAxisCount;
 
-                return Opacity(
-                  opacity: val,
-                  child: Transform.translate(
-                    offset: Offset(0, 12.0 * (1.0 - val)),
-                    child: _CategoryCard(
-                      category: cat,
-                      onTap: () => context.go(
-                        '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            );
-          },
+                  return Wrap(
+                    spacing: spacing,
+                    runSpacing: spacing,
+                    alignment: WrapAlignment.center,
+                    children: List.generate(cats.length, (i) {
+                      final cat = cats[i];
+                      final desc = _catDescriptions[cat.id] ?? '';
+                      final currentMs = _entranceCtrl.value * totalMs;
+                      final t =
+                          ((currentMs - 150.0 * i) / 400.0).clamp(0.0, 1.0);
+                      final val = kCurveEntrance.transform(t);
+
+                      return Opacity(
+                        opacity: val,
+                        child: Transform.translate(
+                          offset: Offset(0, 12.0 * (1.0 - val)),
+                          child: SizedBox(
+                            width: cardWidth,
+                            child: _CategoryCard(
+                              category: cat,
+                              description: desc,
+                              onTap: () => context.go(
+                                '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -328,10 +356,12 @@ class _HomeScreenState extends State<HomeScreen>
 // ── Category mosaic tile with hover effect ──────────────────────────────────
 class _CategoryCard extends StatefulWidget {
   final InterviewCategory category;
+  final String description;
   final VoidCallback onTap;
 
   const _CategoryCard({
     required this.category,
+    required this.description,
     required this.onTap,
   });
 
@@ -344,6 +374,8 @@ class _CategoryCardState extends State<_CategoryCard> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovering = true),
@@ -353,30 +385,20 @@ class _CategoryCardState extends State<_CategoryCard> {
         child: AnimatedContainer(
           duration: kDurationFast,
           curve: kCurveHover,
-          width: 140,
-          padding: const EdgeInsets.symmetric(vertical: kS20, horizontal: kS8),
+          padding: const EdgeInsets.symmetric(vertical: kS20, horizontal: kS12),
           transform: _hovering
-              ? (Matrix4.identity()..scale(1.04))
+              ? (Matrix4.identity()..scale(1.02))
               : Matrix4.identity(),
           transformAlignment: Alignment.center,
           decoration: BoxDecoration(
-            color: context.colors.glassBg,
+            color: colors.bgElevated,
             borderRadius: BorderRadius.circular(kRadiusLg),
             border: Border.all(
               color: _hovering
-                  ? kAccent.withValues(alpha: 0.3)
-                  : context.colors.glassBorder,
+                  ? kAccent.withValues(alpha: 0.25)
+                  : colors.borderStrong,
             ),
-            boxShadow: _hovering
-                ? [
-                    BoxShadow(
-                      color: kAccent.withValues(alpha: 0.1),
-                      blurRadius: 16,
-                      spreadRadius: 1,
-                    ),
-                    ...kShadowMd,
-                  ]
-                : kShadowSm,
+            boxShadow: _hovering ? kShadowMd : kShadowSm,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -392,12 +414,25 @@ class _CategoryCardState extends State<_CategoryCard> {
                 widget.category.name,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: context.colors.textPrimary,
+                  color: colors.textPrimary,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
+              if (widget.description.isNotEmpty) ...[
+                const SizedBox(height: kS4),
+                Text(
+                  widget.description,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    color: colors.textTertiary,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ],
           ),
         ),
