@@ -90,6 +90,22 @@
         setTimeout(() => loader.remove(), 300);
       }
     });
+
+    // Handle tabs extension messages to prevent console errors
+    if (window.chrome && window.chrome.runtime) {
+      window.chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+        if (request.message === 'ready' || request.type === 'tabs:outgoing.message.ready') {
+          sendResponse({status: 'acknowledged'});
+        }
+      });
+    }
+
+    // Fallback listener for unhandled runtime messages
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'tabs:outgoing.message.ready') {
+        event.preventDefault && event.preventDefault();
+      }
+    });
   </script>
 
   <script src="flutter_bootstrap.js" async></script>
