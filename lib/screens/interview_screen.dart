@@ -353,14 +353,15 @@ class _InterviewScreenState extends State<InterviewScreen>
 
                       const SizedBox(height: kS8),
 
-                      // ── Progress bar (60s, during recording) ──────────────
-                      if (_recording)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 560),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(kRadiusMd),
+                      // ── Progress bar (60s, always reserves space) ─────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 560),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(kRadiusMd),
+                            child: Opacity(
+                              opacity: _recording ? 1.0 : 0.0,
                               child: LinearProgressIndicator(
                                 value: (_elapsed.inSeconds / 60).clamp(0.0, 1.0),
                                 minHeight: 4,
@@ -370,6 +371,7 @@ class _InterviewScreenState extends State<InterviewScreen>
                             ),
                           ),
                         ),
+                      ),
 
                       const SizedBox(height: kS16),
 
