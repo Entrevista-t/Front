@@ -406,114 +406,117 @@ class _InterviewScreenState extends State<InterviewScreen>
   }
 
   Widget _buildRecordButton() {
-    if (_recording) {
-      // Pill-shaped stop button with timer
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: _stopAndSubmit,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: kS24, vertical: kS12),
-                decoration: BoxDecoration(
-                  color: kAccent,
-                  borderRadius: BorderRadius.circular(kRadiusFull),
-                  boxShadow: [
-                    BoxShadow(
-                      color: kAccent.withValues(alpha: 0.25),
-                      blurRadius: 16,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.stop_rounded, color: Colors.white, size: 20),
-                    const SizedBox(width: kS8),
-                    const Text(
-                      'Atura la gravació',
-                      style: TextStyle(
-                        fontFamily: 'Satoshi',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: kS12),
-          Text(
-            _elapsedFormatted,
-            style: TextStyle(
-              color: context.colors.textSecondary,
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Circular record button with pulsing ring (pre-recording)
+    // Fixed height prevents layout shift when switching states
     return SizedBox(
-      width: 120,
       height: 120,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          AnimatedBuilder(
-            animation: _ringPulseCtrl,
-            builder: (context, _) {
-              final scale = 1.0 + 0.5 * _ringPulseCtrl.value;
-              final opacity = 1.0 - _ringPulseCtrl.value;
-              return Transform.scale(
-                scale: scale,
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: kAccent.withValues(alpha: opacity * 0.5),
-                      width: 2,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-          GestureDetector(
-            onTap: _startRecording,
+      child: _recording ? _buildStopButton() : _buildIdleRecordButton(),
+    );
+  }
+
+  Widget _buildStopButton() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: _stopAndSubmit,
             child: Container(
-              width: 72,
-              height: 72,
+              padding: const EdgeInsets.symmetric(horizontal: kS24, vertical: kS12),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
                 color: kAccent,
+                borderRadius: BorderRadius.circular(kRadiusFull),
                 boxShadow: [
                   BoxShadow(
-                    color: kAccent.withValues(alpha: 0.2),
+                    color: kAccent.withValues(alpha: 0.25),
                     blurRadius: 16,
                     spreadRadius: 2,
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.fiber_manual_record_rounded,
-                color: Colors.white,
-                size: 32,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.stop_rounded, color: Colors.white, size: 20),
+                  const SizedBox(width: kS8),
+                  const Text(
+                    'Atura la gravació',
+                    style: TextStyle(
+                      fontFamily: 'Satoshi',
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: kS8),
+        Text(
+          _elapsedFormatted,
+          style: TextStyle(
+            color: context.colors.textSecondary,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIdleRecordButton() {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        AnimatedBuilder(
+          animation: _ringPulseCtrl,
+          builder: (context, _) {
+            final scale = 1.0 + 0.5 * _ringPulseCtrl.value;
+            final opacity = 1.0 - _ringPulseCtrl.value;
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: kAccent.withValues(alpha: opacity * 0.5),
+                    width: 2,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        GestureDetector(
+          onTap: _startRecording,
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: kAccent,
+              boxShadow: [
+                BoxShadow(
+                  color: kAccent.withValues(alpha: 0.2),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.fiber_manual_record_rounded,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -4,7 +4,7 @@ import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import '../theme/app_theme.dart' show kFontSerif;
+import '../theme/app_theme.dart' show kFontSans;
 import '../widgets/app_section_header.dart';
 import '../widgets/dot_grid_background.dart';
 import '../widgets/glass_container.dart';
@@ -157,7 +157,7 @@ class _HomeScreenState extends State<HomeScreen>
                       Text(
                         _greeting,
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontFamily: kFontSerif,
+                          fontFamily: kFontSans,
                           fontWeight: FontWeight.w600,
                           fontStyle: FontStyle.normal,
                         ),
@@ -167,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen>
                       Text(
                         'Escull una categoria per començar una entrevista.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontFamily: kFontSerif,
+                          fontFamily: kFontSans,
                           fontWeight: FontWeight.w500,
                           fontStyle: FontStyle.normal,
                         ),
