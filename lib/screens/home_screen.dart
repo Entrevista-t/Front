@@ -307,70 +307,110 @@ class _HomeScreenState extends State<HomeScreen>
                 final cardHeight = cardWidth * 1.15;
                 final gridHeight = cardHeight * rows + spacing;
                 final columnExtent = cardWidth + spacing;
+                const hoverOverflow = 6.0;
 
-                return SizedBox(
-                  height: gridHeight,
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    scrollDirection: Axis.horizontal,
-                    physics: _ColumnSnapScrollPhysics(
-                        columnExtent: columnExtent),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: kPagePadding),
-                    itemCount: colCount,
-                    itemExtent: columnExtent,
-                    itemBuilder: (context, colIndex) {
-                      return Column(
-                        children: List.generate(rows, (rowIndex) {
-                            final catIndex =
-                                colIndex * rows + rowIndex;
-                            if (catIndex >= cats.length) {
-                              return SizedBox(
-                                width: cardWidth,
-                                height: cardHeight,
-                              );
-                            }
-                            final cat = cats[catIndex];
-                            final desc =
-                                _catDescriptions[cat.id] ?? '';
-                            final currentMs =
-                                _entranceCtrl.value * totalMs;
-                            final t = ((currentMs -
-                                        150.0 * catIndex) /
-                                    400.0)
-                                .clamp(0.0, 1.0);
-                            final val =
-                                kCurveEntrance.transform(t);
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: hoverOverflow),
+                      child: SizedBox(
+                        height: gridHeight,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context)
+                              .copyWith(scrollbars: false),
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            scrollDirection: Axis.horizontal,
+                            clipBehavior: Clip.none,
+                            physics: _ColumnSnapScrollPhysics(
+                                columnExtent: columnExtent),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: kPagePadding),
+                            itemCount: colCount,
+                            itemExtent: columnExtent,
+                            itemBuilder: (context, colIndex) {
+                              return Column(
+                                children:
+                                    List.generate(rows, (rowIndex) {
+                                  final catIndex =
+                                      colIndex * rows + rowIndex;
+                                  if (catIndex >= cats.length) {
+                                    return SizedBox(
+                                      width: cardWidth,
+                                      height: cardHeight,
+                                    );
+                                  }
+                                  final cat = cats[catIndex];
+                                  final desc =
+                                      _catDescriptions[cat.id] ?? '';
+                                  final currentMs =
+                                      _entranceCtrl.value * totalMs;
+                                  final t = ((currentMs -
+                                              150.0 * catIndex) /
+                                          400.0)
+                                      .clamp(0.0, 1.0);
+                                  final val =
+                                      kCurveEntrance.transform(t);
 
-                            return Padding(
-                              padding: EdgeInsets.only(
-                                bottom:
-                                    rowIndex < rows - 1 ? spacing : 0,
-                                right: spacing,
-                              ),
-                              child: Opacity(
-                                opacity: val,
-                                child: Transform.translate(
-                                  offset: Offset(
-                                      0, 12.0 * (1.0 - val)),
-                                  child: SizedBox(
-                                    width: cardWidth,
-                                    height: cardHeight,
-                                    child: _CategoryCard(
-                                      category: cat,
-                                      description: desc,
-                                      onTap: () => context.go(
-                                        '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                                  return Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom: rowIndex < rows - 1
+                                          ? spacing
+                                          : 0,
+                                      right: spacing,
+                                    ),
+                                    child: Opacity(
+                                      opacity: val,
+                                      child: Transform.translate(
+                                        offset: Offset(
+                                            0, 12.0 * (1.0 - val)),
+                                        child: SizedBox(
+                                          width: cardWidth,
+                                          height: cardHeight,
+                                          child: _CategoryCard(
+                                            category: cat,
+                                            description: desc,
+                                            onTap: () => context.go(
+                                              '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     ),
+                                  );
+                                }),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (colCount > visibleCols)
+                      Padding(
+                        padding: const EdgeInsets.only(top: kS4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.swipe_rounded,
+                                size: 16,
+                                color: context.colors.textTertiary),
+                            const SizedBox(width: kS4),
+                            Text(
+                              'Llisca per veure més',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    fontSize: 12,
+                                    color: context.colors.textTertiary,
                                   ),
-                                ),
-                              ),
-                            );
-                          }),
-                        );
-                    },
-                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
                 );
               },
             );
