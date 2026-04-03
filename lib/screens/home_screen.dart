@@ -43,9 +43,8 @@ class _HomeScreenState extends State<HomeScreen>
   List<InterviewCategory> _filteredCategories = [];
   List<InterviewSession> _recentSessions = [];
   bool _loading = true;
-  int _currentPage = 0;
   final _searchController = TextEditingController();
-  final _pageController = PageController();
+  final _scrollController = ScrollController();
   late final AnimationController _entranceCtrl;
 
   String get _greeting {
@@ -76,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     _entranceCtrl.dispose();
     _searchController.dispose();
-    _pageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -92,8 +91,8 @@ class _HomeScreenState extends State<HomeScreen>
             .toList();
       }
     });
-    if (_pageController.hasClients) {
-      _pageController.jumpToPage(0);
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
     }
     _restartEntrance(_filteredCategories.length);
   }
@@ -270,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // ── Category grid (2 rows × 4 cols, horizontal snap scroll) ───────────────
+  // ── Category grid (2 rows, horizontal column-snap scroll) ─────────────────
   Widget _buildCategoryGrid() {
     final cats = _filteredCategories;
     if (cats.isEmpty) {
@@ -286,11 +285,12 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     final totalMs = (150 * (cats.length - 1) + 400).clamp(400, 2000);
-    const cols = 4;
+    const visibleCols = 4;
     const rows = 2;
-    const pageSize = cols * rows;
     const spacing = kS16;
-    final pageCount = (cats.length / pageSize).ceil();
+
+    // Arrange categories into columns of `rows` items each.
+    final colCount = (cats.length / rows).ceil();
 
     return Center(
       child: ConstrainedBox(
@@ -303,97 +303,75 @@ class _HomeScreenState extends State<HomeScreen>
                 final availableWidth =
                     constraints.maxWidth - kPagePadding * 2;
                 final cardWidth =
-                    (availableWidth - spacing * (cols - 1)) / cols;
+                    (availableWidth - spacing * (visibleCols - 1)) /
+                        visibleCols;
                 final cardHeight = cardWidth * 1.15;
                 final gridHeight = cardHeight * rows + spacing;
+                final columnExtent = cardWidth + spacing;
 
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      height: gridHeight,
-                      child: PageView.builder(
-                        controller: _pageController,
-                        onPageChanged: (i) =>
-                            setState(() => _currentPage = i),
-                        itemCount: pageCount,
-                        itemBuilder: (context, pageIndex) {
-                          final start = pageIndex * pageSize;
-                          final end =
-                              (start + pageSize).clamp(0, cats.length);
-                          final pageCats = cats.sublist(start, end);
+                return SizedBox(
+                  height: gridHeight,
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    scrollDirection: Axis.horizontal,
+                    physics: _ColumnSnapScrollPhysics(
+                        columnExtent: columnExtent),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: kPagePadding),
+                    itemCount: colCount,
+                    itemExtent: columnExtent,
+                    itemBuilder: (context, colIndex) {
+                      return Column(
+                        children: List.generate(rows, (rowIndex) {
+                            final catIndex =
+                                colIndex * rows + rowIndex;
+                            if (catIndex >= cats.length) {
+                              return SizedBox(
+                                width: cardWidth,
+                                height: cardHeight,
+                              );
+                            }
+                            final cat = cats[catIndex];
+                            final desc =
+                                _catDescriptions[cat.id] ?? '';
+                            final currentMs =
+                                _entranceCtrl.value * totalMs;
+                            final t = ((currentMs -
+                                        150.0 * catIndex) /
+                                    400.0)
+                                .clamp(0.0, 1.0);
+                            final val =
+                                kCurveEntrance.transform(t);
 
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: kPagePadding),
-                            child: Wrap(
-                              spacing: spacing,
-                              runSpacing: spacing,
-                              children:
-                                  List.generate(pageCats.length, (i) {
-                                final globalIndex = start + i;
-                                final cat = pageCats[i];
-                                final desc =
-                                    _catDescriptions[cat.id] ?? '';
-                                final currentMs =
-                                    _entranceCtrl.value * totalMs;
-                                final t = ((currentMs -
-                                            150.0 * globalIndex) /
-                                        400.0)
-                                    .clamp(0.0, 1.0);
-                                final val =
-                                    kCurveEntrance.transform(t);
-
-                                return Opacity(
-                                  opacity: val,
-                                  child: Transform.translate(
-                                    offset: Offset(
-                                        0, 12.0 * (1.0 - val)),
-                                    child: SizedBox(
-                                      width: cardWidth,
-                                      height: cardHeight,
-                                      child: _CategoryCard(
-                                        category: cat,
-                                        description: desc,
-                                        onTap: () => context.go(
-                                          '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
-                                        ),
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                bottom:
+                                    rowIndex < rows - 1 ? spacing : 0,
+                                right: spacing,
+                              ),
+                              child: Opacity(
+                                opacity: val,
+                                child: Transform.translate(
+                                  offset: Offset(
+                                      0, 12.0 * (1.0 - val)),
+                                  child: SizedBox(
+                                    width: cardWidth,
+                                    height: cardHeight,
+                                    child: _CategoryCard(
+                                      category: cat,
+                                      description: desc,
+                                      onTap: () => context.go(
+                                        '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
                                       ),
                                     ),
                                   ),
-                                );
-                              }),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    if (pageCount > 1) ...[
-                      const SizedBox(height: kS12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(pageCount, (i) {
-                          final isActive = i == _currentPage;
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4),
-                            child: AnimatedContainer(
-                              duration: kDurationFast,
-                              width: isActive ? 20 : 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(
-                                    kRadiusFull),
-                                color: isActive
-                                    ? kAccent
-                                    : context.colors.borderStrong,
+                                ),
                               ),
-                            ),
-                          );
-                        }),
-                      ),
-                    ],
-                  ],
+                            );
+                          }),
+                        );
+                    },
+                  ),
                 );
               },
             );
@@ -660,4 +638,57 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
       ),
     );
   }
+}
+
+// ── Scroll physics that snaps to column boundaries ─────────────────────────
+class _ColumnSnapScrollPhysics extends ScrollPhysics {
+  final double columnExtent;
+
+  const _ColumnSnapScrollPhysics({
+    required this.columnExtent,
+    super.parent,
+  });
+
+  @override
+  _ColumnSnapScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _ColumnSnapScrollPhysics(
+      columnExtent: columnExtent,
+      parent: buildParent(ancestor),
+    );
+  }
+
+  double _snapToColumn(double offset) {
+    return (offset / columnExtent).round() * columnExtent;
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+      ScrollMetrics position, double velocity) {
+    if ((velocity.abs() < toleranceFor(position).velocity) &&
+        (position.pixels - _snapToColumn(position.pixels)).abs() <
+            toleranceFor(position).distance) {
+      return null;
+    }
+
+    final target = _snapToColumn(
+      velocity > 0
+          ? position.pixels + columnExtent * 0.5
+          : velocity < 0
+              ? position.pixels - columnExtent * 0.5
+              : position.pixels,
+    ).clamp(position.minScrollExtent, position.maxScrollExtent);
+
+    if (target == position.pixels) return null;
+
+    return ScrollSpringSimulation(
+      spring,
+      position.pixels,
+      target,
+      velocity,
+      tolerance: toleranceFor(position),
+    );
+  }
+
+  @override
+  bool get allowImplicitScrolling => false;
 }
