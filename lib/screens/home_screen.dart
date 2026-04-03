@@ -85,19 +85,41 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _filterCategories() {
     final q = _searchController.text.toLowerCase().trim();
-    setState(() {
-      if (q.isEmpty) {
-        _filteredCategories = _allCats;
-      } else {
-        _filteredCategories = _allCats
-            .where((c) => c.name.toLowerCase().contains(q))
-            .toList();
-      }
-    });
-    if (_scrollController.hasClients) {
-      _scrollController.jumpTo(0);
+    final previous = _filteredCategories;
+    List<InterviewCategory> updated;
+    if (q.isEmpty) {
+      updated = _allCats;
+    } else {
+      updated = _allCats
+          .where((c) => c.name.toLowerCase().contains(q))
+          .toList();
     }
-    _restartEntrance(_filteredCategories.length);
+    if (updated.length == previous.length &&
+        identical(updated, previous) == false &&
+        q.isEmpty &&
+        _searchController.text.isEmpty) {
+      return;
+    }
+    final changed = updated.length != previous.length ||
+        !_listsEqual(updated, previous);
+    setState(() {
+      _filteredCategories = updated;
+    });
+    if (changed) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+      _restartEntrance(_filteredCategories.length);
+    }
+  }
+
+  static bool _listsEqual(
+      List<InterviewCategory> a, List<InterviewCategory> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+    }
+    return true;
   }
 
   void _updateScrollArrows() {
@@ -144,9 +166,17 @@ class _HomeScreenState extends State<HomeScreen>
       backgroundColor: context.colors.bgBase,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: kS12),
-          child: _ThemeToggleButton(),
+        leading: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = MediaQuery.of(context).size.width < 600;
+            if (isMobile) {
+              return Padding(
+                padding: const EdgeInsets.only(left: kS12),
+                child: _ThemeToggleButton(),
+              );
+            }
+            return const SizedBox(width: 48);
+          },
         ),
         title: Center(
           child: GestureDetector(
