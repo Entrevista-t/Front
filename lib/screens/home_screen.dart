@@ -82,7 +82,6 @@ class _HomeScreenState extends State<HomeScreen>
   void _filterCategories() {
     final q = _searchController.text.toLowerCase().trim();
     setState(() {
-      _currentPage = 0;
       if (q.isEmpty) {
         _filteredCategories = _allCats;
       } else {
