@@ -300,157 +300,167 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     final totalMs = (150 * (cats.length - 1) + 400).clamp(400, 2000);
-    const visibleCols = 4;
     const rows = 2;
     const spacing = kS16;
+    const hoverOverflow = 6.0;
+    const arrowWidth = 36.0;
 
-    // Arrange categories into columns of `rows` items each.
     final colCount = (cats.length / rows).ceil();
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720 + kPagePadding * 2),
-        child: AnimatedBuilder(
-          animation: _entranceCtrl,
-          builder: (context, _) {
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                final availableWidth =
-                    constraints.maxWidth - kPagePadding * 2;
-                final cardWidth =
-                    (availableWidth - spacing * (visibleCols - 1)) /
-                        visibleCols;
-                final cardHeight = cardWidth * 1.15;
-                const hoverOverflow = 6.0;
-                final gridHeight =
-                    cardHeight * rows + spacing + hoverOverflow * 2;
-                final columnExtent = cardWidth + spacing;
+    return AnimatedBuilder(
+      animation: _entranceCtrl,
+      builder: (context, _) {
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final screenWidth = constraints.maxWidth;
 
-                // Schedule arrow state update after layout.
-                WidgetsBinding.instance.addPostFrameCallback(
-                    (_) => _updateScrollArrows());
+            // Responsive: 2 columns on mobile, 4 on desktop.
+            final visibleCols = screenWidth < 600 ? 2 : 4;
+            final showArrows = colCount > visibleCols && screenWidth >= 600;
 
-                final showArrows = colCount > visibleCols;
+            // Available space for the grid area (between arrows).
+            final arrowSpace = showArrows ? arrowWidth * 2 : 0.0;
+            final maxGridContent = 720.0;
+            final availableForGrid =
+                (screenWidth - 2 * kPagePadding - arrowSpace)
+                    .clamp(0.0, maxGridContent);
 
-                return Row(
-                  children: [
-                    // Left arrow
-                    if (showArrows)
-                      _GridArrow(
-                        icon: Icons.chevron_left_rounded,
-                        visible: _canScrollLeft,
-                        onTap: () => _scrollController.animateTo(
-                          (_scrollController.offset - columnExtent)
-                              .clamp(
-                                  _scrollController
-                                      .position.minScrollExtent,
-                                  _scrollController
-                                      .position.maxScrollExtent),
-                          duration: kDurationNormal,
-                          curve: kCurveEntrance,
-                        ),
-                      ),
+            // Card width so that visibleCols columns + gaps fit exactly.
+            final cardWidth =
+                (availableForGrid - spacing * (visibleCols - 1)) /
+                    visibleCols;
+            final cardHeight = cardWidth * 1.15;
+            final columnExtent = cardWidth + spacing;
 
-                    // Grid
-                    Expanded(
-                      child: SizedBox(
-                        height: gridHeight,
-                        child: ScrollConfiguration(
-                          behavior: ScrollConfiguration.of(context)
-                              .copyWith(scrollbars: false),
-                          child: ListView.builder(
-                            controller: _scrollController,
-                            scrollDirection: Axis.horizontal,
-                            physics: _ColumnSnapScrollPhysics(
-                                columnExtent: columnExtent),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: kPagePadding),
-                            itemCount: colCount,
-                            itemExtent: columnExtent,
-                            itemBuilder: (context, colIndex) {
-                              return Column(
-                                children: [
-                                  SizedBox(height: hoverOverflow),
-                                  ...List.generate(rows, (rowIndex) {
-                                    final catIndex =
-                                        colIndex * rows + rowIndex;
-                                    if (catIndex >= cats.length) {
-                                      return SizedBox(
-                                        width: cardWidth,
-                                        height: cardHeight,
-                                      );
-                                    }
-                                    final cat = cats[catIndex];
-                                    final desc =
-                                        _catDescriptions[cat.id] ??
-                                            '';
-                                    final currentMs =
-                                        _entranceCtrl.value * totalMs;
-                                    final t = ((currentMs -
-                                                150.0 * catIndex) /
-                                            400.0)
-                                        .clamp(0.0, 1.0);
-                                    final val =
-                                        kCurveEntrance.transform(t);
+            // Exact grid width = visibleCols full column slots.
+            // Last column's trailing spacing is outside the viewport,
+            // ensuring only visibleCols cards show without slivers.
+            final gridWidth = visibleCols * columnExtent;
+            final gridHeight =
+                cardHeight * rows + spacing + hoverOverflow * 2;
 
-                                    return Padding(
-                                      padding: EdgeInsets.only(
-                                        bottom: rowIndex < rows - 1
-                                            ? spacing
-                                            : 0,
-                                        right: spacing,
-                                      ),
-                                      child: Opacity(
-                                        opacity: val,
-                                        child: Transform.translate(
-                                          offset: Offset(
-                                              0, 12.0 * (1.0 - val)),
-                                          child: SizedBox(
-                                            width: cardWidth,
-                                            height: cardHeight,
-                                            child: _CategoryCard(
-                                              category: cat,
-                                              description: desc,
-                                              onTap: () => context.go(
-                                                '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }),
-                                ],
-                              );
-                            },
-                          ),
-                        ),
+            // Schedule arrow state update after layout.
+            WidgetsBinding.instance
+                .addPostFrameCallback((_) => _updateScrollArrows());
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: kPagePadding),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Left arrow
+                  if (showArrows)
+                    _GridArrow(
+                      icon: Icons.chevron_left_rounded,
+                      visible: _canScrollLeft,
+                      onTap: () => _scrollController.animateTo(
+                        (_scrollController.offset - columnExtent)
+                            .clamp(
+                                _scrollController
+                                    .position.minScrollExtent,
+                                _scrollController
+                                    .position.maxScrollExtent),
+                        duration: kDurationNormal,
+                        curve: kCurveEntrance,
                       ),
                     ),
 
-                    // Right arrow
-                    if (showArrows)
-                      _GridArrow(
-                        icon: Icons.chevron_right_rounded,
-                        visible: _canScrollRight,
-                        onTap: () => _scrollController.animateTo(
-                          (_scrollController.offset + columnExtent)
-                              .clamp(
-                                  _scrollController
-                                      .position.minScrollExtent,
-                                  _scrollController
-                                      .position.maxScrollExtent),
-                          duration: kDurationNormal,
-                          curve: kCurveEntrance,
-                        ),
+                  // Grid
+                  SizedBox(
+                    width: gridWidth,
+                    height: gridHeight,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context)
+                          .copyWith(scrollbars: false),
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        scrollDirection: Axis.horizontal,
+                        physics: _ColumnSnapScrollPhysics(
+                            columnExtent: columnExtent),
+                        padding: EdgeInsets.zero,
+                        itemCount: colCount,
+                        itemExtent: columnExtent,
+                        itemBuilder: (context, colIndex) {
+                          return Column(
+                            children: [
+                              SizedBox(height: hoverOverflow),
+                              ...List.generate(rows, (rowIndex) {
+                                final catIndex =
+                                    colIndex * rows + rowIndex;
+                                if (catIndex >= cats.length) {
+                                  return SizedBox(
+                                    width: cardWidth,
+                                    height: cardHeight,
+                                  );
+                                }
+                                final cat = cats[catIndex];
+                                final desc =
+                                    _catDescriptions[cat.id] ?? '';
+                                final currentMs =
+                                    _entranceCtrl.value * totalMs;
+                                final t = ((currentMs -
+                                            150.0 * catIndex) /
+                                        400.0)
+                                    .clamp(0.0, 1.0);
+                                final val =
+                                    kCurveEntrance.transform(t);
+
+                                return Padding(
+                                  padding: EdgeInsets.only(
+                                    bottom: rowIndex < rows - 1
+                                        ? spacing
+                                        : 0,
+                                  ),
+                                  child: Opacity(
+                                    opacity: val,
+                                    child: Transform.translate(
+                                      offset: Offset(
+                                          0, 12.0 * (1.0 - val)),
+                                      child: SizedBox(
+                                        width: cardWidth,
+                                        height: cardHeight,
+                                        child: _CategoryCard(
+                                          category: cat,
+                                          description: desc,
+                                          onTap: () => context.go(
+                                            '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ],
+                          );
+                        },
                       ),
-                  ],
-                );
-              },
+                    ),
+                  ),
+
+                  // Right arrow
+                  if (showArrows)
+                    _GridArrow(
+                      icon: Icons.chevron_right_rounded,
+                      visible: _canScrollRight,
+                      onTap: () => _scrollController.animateTo(
+                        (_scrollController.offset + columnExtent)
+                            .clamp(
+                                _scrollController
+                                    .position.minScrollExtent,
+                                _scrollController
+                                    .position.maxScrollExtent),
+                        duration: kDurationNormal,
+                        curve: kCurveEntrance,
+                      ),
+                    ),
+                ],
+              ),
             );
           },
-        ),
-      ),
+        );
+      },
     );
   }
 
