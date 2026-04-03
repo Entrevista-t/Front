@@ -325,17 +325,14 @@ class _HomeScreenState extends State<HomeScreen>
                 (screenWidth - 2 * kPagePadding - arrowSpace)
                     .clamp(0.0, maxGridContent);
 
-            // Card width so that visibleCols columns + gaps fit exactly.
-            final cardWidth =
-                (availableForGrid - spacing * (visibleCols - 1)) /
-                    visibleCols;
+            // Card width so that visibleCols columns fit exactly in
+            // the available space (gridWidth == availableForGrid).
+            final cardWidth = availableForGrid / visibleCols - spacing;
             final cardHeight = cardWidth * 1.15;
             final columnExtent = cardWidth + spacing;
 
-            // Exact grid width = visibleCols full column slots.
-            // Last column's trailing spacing is outside the viewport,
-            // ensuring only visibleCols cards show without slivers.
-            final gridWidth = visibleCols * columnExtent;
+            // gridWidth == visibleCols * columnExtent == availableForGrid.
+            final gridWidth = availableForGrid;
             final gridHeight =
                 cardHeight * rows + spacing + hoverOverflow * 2;
 
@@ -377,7 +374,8 @@ class _HomeScreenState extends State<HomeScreen>
                         controller: _scrollController,
                         scrollDirection: Axis.horizontal,
                         physics: _ColumnSnapScrollPhysics(
-                            columnExtent: columnExtent),
+                            columnExtent: columnExtent,
+                            parent: const ClampingScrollPhysics()),
                         padding: EdgeInsets.zero,
                         itemCount: colCount,
                         itemExtent: columnExtent,
