@@ -83,15 +83,26 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
+  /// Strips diacritics for accent-insensitive search.
+  static String _removeDiacritics(String s) {
+    const withDiacritics =    'àáâãäåèéêëìíîïòóôõöùúûüýÿñçÀÁÂÃÄÅÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÝŸÑÇ';
+    const withoutDiacritics = 'aaaaaaeeeeiiiioooooouuuuyynçAAAAAAEEEEIIIIOOOOOUUUUYYNC';
+    return s.split('').map((c) {
+      final i = withDiacritics.indexOf(c);
+      return i >= 0 ? withoutDiacritics[i] : c;
+    }).join();
+  }
+
   void _filterCategories() {
-    final q = _searchController.text.toLowerCase().trim();
+    final q = _removeDiacritics(_searchController.text.toLowerCase().trim());
     final previous = _filteredCategories;
     List<InterviewCategory> updated;
     if (q.isEmpty) {
       updated = _allCats;
     } else {
       updated = _allCats
-          .where((c) => c.name.toLowerCase().contains(q))
+          .where((c) =>
+              _removeDiacritics(c.name.toLowerCase()).contains(q))
           .toList();
     }
     if (updated.length == previous.length &&
