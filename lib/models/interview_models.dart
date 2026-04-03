@@ -15,6 +15,16 @@ class InterviewCategory {
       'data': Icons.analytics,
       'management': Icons.people,
       'marketing': Icons.campaign,
+      'finance': Icons.account_balance,
+      'sales': Icons.storefront,
+      'hr': Icons.groups,
+      'legal': Icons.gavel,
+      'healthcare': Icons.local_hospital,
+      'education': Icons.school,
+      'devops': Icons.cloud,
+      'cybersecurity': Icons.shield,
+      'product': Icons.rocket_launch,
+      'communication': Icons.record_voice_over,
     };
     return InterviewCategory(
       id: json['id'],
@@ -30,6 +40,16 @@ class InterviewCategory {
         InterviewCategory(id: 'management', name: 'Gestió de Projectes', icon: Icons.people),
         InterviewCategory(id: 'marketing', name: 'Màrqueting Digital', icon: Icons.campaign),
         InterviewCategory(id: 'general', name: 'General', icon: Icons.work_outline),
+        InterviewCategory(id: 'finance', name: 'Finances i Comptabilitat', icon: Icons.account_balance),
+        InterviewCategory(id: 'sales', name: 'Vendes', icon: Icons.storefront),
+        InterviewCategory(id: 'hr', name: 'Recursos Humans', icon: Icons.groups),
+        InterviewCategory(id: 'legal', name: 'Assessoria Legal', icon: Icons.gavel),
+        InterviewCategory(id: 'healthcare', name: 'Salut i Medicina', icon: Icons.local_hospital),
+        InterviewCategory(id: 'education', name: 'Educació', icon: Icons.school),
+        InterviewCategory(id: 'devops', name: 'DevOps i Cloud', icon: Icons.cloud),
+        InterviewCategory(id: 'cybersecurity', name: 'Ciberseguretat', icon: Icons.shield),
+        InterviewCategory(id: 'product', name: 'Product Management', icon: Icons.rocket_launch),
+        InterviewCategory(id: 'communication', name: 'Comunicació', icon: Icons.record_voice_over),
       ];
 }
 

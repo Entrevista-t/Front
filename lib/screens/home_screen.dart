@@ -27,6 +27,16 @@ class _HomeScreenState extends State<HomeScreen>
     'management': 'Lideratge, àgil i planificació',
     'marketing': 'Estratègia digital i xarxes',
     'general': 'Competències transversals',
+    'finance': 'Comptabilitat, inversió i auditoria',
+    'sales': 'Estratègies comercials i negociació',
+    'hr': 'Selecció, formació i cultura',
+    'legal': 'Normativa, contractes i compliance',
+    'healthcare': 'Diagnòstic, recerca i atenció',
+    'education': 'Pedagogia, formació i didàctica',
+    'devops': 'CI/CD, infraestructura i cloud',
+    'cybersecurity': 'Seguretat, xarxes i criptografia',
+    'product': 'Roadmap, mètriques i discovery',
+    'communication': 'Oratòria, mitjans i redacció',
   };
 
   List<InterviewCategory> _categories = [];
