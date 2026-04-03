@@ -7,7 +7,7 @@ import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import '../theme/app_theme.dart' show kFontSerif;
+import '../theme/app_theme.dart' show kFontSans;
 import '../widgets/dot_grid_background.dart';
 import '../widgets/onboarding_dialog.dart';
 
@@ -27,7 +27,7 @@ class InterviewScreen extends StatefulWidget {
 }
 
 class _InterviewScreenState extends State<InterviewScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   CameraController? _camera;
   List<CameraDescription> _cameras = [];
   int _selectedCameraIndex = 0;
@@ -40,27 +40,11 @@ class _InterviewScreenState extends State<InterviewScreen>
   Duration _elapsed = Duration.zero;
   Timer? _timer;
 
-  // Animation controllers
-  late final AnimationController _borderPulseCtrl;
-  late final AnimationController _dotPulseCtrl;
   late final AnimationController _ringPulseCtrl;
-
-  String get _displayName =>
-      widget.categoryName ?? widget.categoryId;
 
   @override
   void initState() {
     super.initState();
-
-    _borderPulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
-
-    _dotPulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..repeat(reverse: true);
 
     _ringPulseCtrl = AnimationController(
       vsync: this,
@@ -218,8 +202,6 @@ class _InterviewScreenState extends State<InterviewScreen>
   @override
   void dispose() {
     _timer?.cancel();
-    _borderPulseCtrl.dispose();
-    _dotPulseCtrl.dispose();
     _ringPulseCtrl.dispose();
     _camera?.dispose();
     super.dispose();
@@ -235,54 +217,38 @@ class _InterviewScreenState extends State<InterviewScreen>
     final question = _question ?? Question.fallback().first;
 
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: _recording ? null : () => context.go('/home'),
-          color: _recording ? context.colors.textDisabled : null,
-        ),
-        title: Text(_displayName),
-        actions: const [],
-      ),
       body: DotGridBackground(
         child: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: kS24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // ── Question (prominent, centered, card treatment) ───────
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 600),
-                        child: Container(
-                          padding: const EdgeInsets.all(kS24),
-                          decoration: BoxDecoration(
-                            color: context.colors.bgSurface,
-                            borderRadius: BorderRadius.circular(kRadiusMd),
-                            border: Border.all(color: context.colors.borderSubtle),
-                          ),
+          child: Stack(
+            children: [
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(vertical: kS48),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // ── Question (large, no card) ─────────────────────────
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 700),
                           child: Text(
                             question.text,
                             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontFamily: kFontSerif,
+                              fontFamily: kFontSans,
                               fontWeight: FontWeight.w600,
                               fontStyle: FontStyle.normal,
-                              fontSize: 26,
-                              height: 1.3,
+                              fontSize: 38,
+                              height: 1.25,
                             ),
                             textAlign: TextAlign.center,
                           ),
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: kS16),
+                      const SizedBox(height: kS16),
 
-                    // ── Tutorial button (hidden while recording) ─────────
-                    if (!_recording)
+                      // ── Tutorial button (always visible) ──────────────────
                       Center(
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
@@ -321,207 +287,226 @@ class _InterviewScreenState extends State<InterviewScreen>
                         ),
                       ),
 
-                    const SizedBox(height: kS16),
+                      const SizedBox(height: kS16),
 
-                    // ── Camera preview with overlaid info ──────────────────────
-                    Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 560),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                          child: AnimatedBuilder(
-                            animation: _borderPulseCtrl,
-                            builder: (context, child) {
-                              final borderColor = _recording
-                                  ? Color.lerp(
-                                      kErrorRed.withValues(alpha: 0.3),
-                                      kErrorRed,
-                                      _borderPulseCtrl.value,
-                                    )!
-                                  : context.colors.borderSubtle;
-                              return Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(kRadiusMd + 3),
-                                  border: Border.all(
-                                    color: borderColor,
-                                    width: _recording ? 3.0 : 1.0,
-                                  ),
+                      // ── Camera preview (clean, static border) ─────────────
+                      Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 560),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(kRadiusMd + 3),
+                                border: Border.all(
+                                  color: context.colors.borderSubtle,
                                 ),
-                                child: child,
-                              );
-                            },
-                            child: AspectRatio(
-                              aspectRatio: 16 / 9,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(kRadiusMd),
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    Container(
-                                      color: context.colors.bgElevated,
-                                      child: (_camera != null && _camera!.value.isInitialized)
-                                          ? CameraPreview(_camera!)
-                                          : _buildNoCameraPlaceholder(),
-                                    ),
-                                    // Camera switch button (only when >1 camera)
-                                    if (_cameras.length > 1)
-                                      Positioned(
-                                        top: 8,
-                                        right: 8,
-                                        child: Material(
-                                          color: Colors.transparent,
-                                          child: InkWell(
-                                            onTap: _recording ? null : _switchCamera,
-                                            customBorder: const CircleBorder(),
-                                            child: Container(
-                                              width: 36,
-                                              height: 36,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: Colors.black.withValues(alpha: 0.45),
-                                              ),
-                                              child: Icon(
-                                                Icons.cameraswitch_rounded,
-                                                size: 18,
-                                                color: _recording
-                                                    ? Colors.white.withValues(alpha: 0.3)
-                                                    : Colors.white.withValues(alpha: 0.9),
+                              ),
+                              child: AspectRatio(
+                                aspectRatio: 16 / 9,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(kRadiusMd),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      Container(
+                                        color: context.colors.bgElevated,
+                                        child: (_camera != null && _camera!.value.isInitialized)
+                                            ? CameraPreview(_camera!)
+                                            : _buildNoCameraPlaceholder(),
+                                      ),
+                                      if (_cameras.length > 1)
+                                        Positioned(
+                                          top: 8,
+                                          right: 8,
+                                          child: Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              onTap: _recording ? null : _switchCamera,
+                                              customBorder: const CircleBorder(),
+                                              child: Container(
+                                                width: 36,
+                                                height: 36,
+                                                decoration: BoxDecoration(
+                                                  shape: BoxShape.circle,
+                                                  color: Colors.black.withValues(alpha: 0.45),
+                                                ),
+                                                child: Icon(
+                                                  Icons.cameraswitch_rounded,
+                                                  size: 18,
+                                                  color: _recording
+                                                      ? Colors.white.withValues(alpha: 0.3)
+                                                      : Colors.white.withValues(alpha: 0.9),
+                                                ),
                                               ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: kS8),
-
-                    // ── Timer (below camera) ─────────────────────────────────
-                    if (_recording) Center(child: _buildTimerBadge()),
-
-                    if (_recording) ...[
                       const SizedBox(height: kS8),
-                      // ── Progress bar (60s) ───────────────────────────────────
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 560),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(kRadiusMd),
-                            child: LinearProgressIndicator(
-                              value: (_elapsed.inSeconds / 60).clamp(0.0, 1.0),
-                              minHeight: 4,
-                              color: kAccent,
-                              backgroundColor: context.colors.borderSubtle,
+
+                      // ── Progress bar (60s, during recording) ──────────────
+                      if (_recording)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 560),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(kRadiusMd),
+                              child: LinearProgressIndicator(
+                                value: (_elapsed.inSeconds / 60).clamp(0.0, 1.0),
+                                minHeight: 4,
+                                color: kAccent,
+                                backgroundColor: context.colors.borderSubtle,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: kS8),
-                      Text(
-                        'Prem el botó per aturar i enviar',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: kErrorRed),
-                        textAlign: TextAlign.center,
-                      ),
+
+                      const SizedBox(height: kS16),
+
+                      // ── Record / Stop button ──────────────────────────────
+                      Center(child: _buildRecordButton()),
                     ],
-
-                    const SizedBox(height: kS16),
-
-                    // ── Record button ────────────────────────────────────────
-                    Center(child: _buildRecordButton()),
-                  ],
+                  ),
                 ),
               ),
-            ),
+
+              // ── Close button (top-left) ───────────────────────────────
+              Positioned(
+                top: 8,
+                left: 8,
+                child: IconButton(
+                  icon: Icon(
+                    Icons.close,
+                    color: _recording
+                        ? context.colors.textDisabled
+                        : context.colors.textSecondary,
+                  ),
+                  onPressed: _recording ? null : () => context.go('/home'),
+                  style: IconButton.styleFrom(
+                    backgroundColor: context.colors.bgSurface.withValues(alpha: 0.7),
+                    shape: const CircleBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTimerBadge() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AnimatedBuilder(
-          animation: _dotPulseCtrl,
-          builder: (context, child) {
-            return Opacity(
-              opacity: 0.3 + 0.7 * _dotPulseCtrl.value,
-              child: child,
-            );
-          },
-          child: const Icon(Icons.circle, color: kErrorRed, size: 8),
-        ),
-        const SizedBox(width: kS6),
-        Text(
-          _elapsedFormatted,
-          style: const TextStyle(
-            color: kErrorRed,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildRecordButton() {
+    if (_recording) {
+      // Pill-shaped stop button with timer
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: _stopAndSubmit,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: kS24, vertical: kS12),
+                decoration: BoxDecoration(
+                  color: kAccent,
+                  borderRadius: BorderRadius.circular(kRadiusFull),
+                  boxShadow: [
+                    BoxShadow(
+                      color: kAccent.withValues(alpha: 0.25),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.stop_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: kS8),
+                    const Text(
+                      'Atura la gravació',
+                      style: TextStyle(
+                        fontFamily: 'Satoshi',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: kS12),
+          Text(
+            _elapsedFormatted,
+            style: TextStyle(
+              color: context.colors.textSecondary,
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Circular record button with pulsing ring (pre-recording)
     return SizedBox(
       width: 120,
       height: 120,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Pulsing ring when idle
-          if (!_recording)
-            AnimatedBuilder(
-              animation: _ringPulseCtrl,
-              builder: (context, _) {
-                final scale = 1.0 + 0.5 * _ringPulseCtrl.value;
-                final opacity = 1.0 - _ringPulseCtrl.value;
-                return Transform.scale(
-                  scale: scale,
-                  child: Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: kAccent.withValues(alpha: opacity * 0.5),
-                        width: 2,
-                      ),
+          AnimatedBuilder(
+            animation: _ringPulseCtrl,
+            builder: (context, _) {
+              final scale = 1.0 + 0.5 * _ringPulseCtrl.value;
+              final opacity = 1.0 - _ringPulseCtrl.value;
+              return Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: kAccent.withValues(alpha: opacity * 0.5),
+                      width: 2,
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
+          ),
           GestureDetector(
-            onTap: _recording ? _stopAndSubmit : _startRecording,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+            onTap: _startRecording,
+            child: Container(
               width: 72,
               height: 72,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: _recording ? kErrorRed : kAccent,
+                color: kAccent,
                 boxShadow: [
                   BoxShadow(
-                    color: (_recording ? kErrorRed : kAccent).withValues(alpha: 0.2),
+                    color: kAccent.withValues(alpha: 0.2),
                     blurRadius: 16,
                     spreadRadius: 2,
                   ),
                 ],
               ),
-              child: Icon(
-                _recording ? Icons.stop_rounded : Icons.fiber_manual_record_rounded,
+              child: const Icon(
+                Icons.fiber_manual_record_rounded,
                 color: Colors.white,
                 size: 32,
               ),
