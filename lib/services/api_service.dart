@@ -5,8 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/interview_models.dart';
 
 class ApiService {
-  // Replace with the actual Cloudflare tunnel URL when deployed
-  static const String _baseUrl = 'https://api.entrevistat.example.com';
+  static const String _baseUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'https://api-entrevistat.kire.ovh',
+  );
 
   static String? _token;
   static String? _devName;
