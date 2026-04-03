@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../main.dart' show EntrevistatApp;
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
@@ -143,6 +144,10 @@ class _HomeScreenState extends State<HomeScreen>
       backgroundColor: context.colors.bgBase,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: kS12),
+          child: _ThemeToggleButton(),
+        ),
         title: Center(
           child: GestureDetector(
             onTap: () => context.go('/landing'),
@@ -645,6 +650,30 @@ class _GridArrow extends StatelessWidget {
   }
 }
 
+// ── AppBar theme toggle button ─────────────────────────────────────────────
+class _ThemeToggleButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: () => EntrevistatApp.themeNotifier.toggle(),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: kAccent.withValues(alpha: 0.08),
+        ),
+        child: Icon(
+          isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+          size: 16,
+          color: context.colors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
 // ── Profile avatar with hover animation + styled popup menu ────────────────
 class _ProfileMenuButton extends StatefulWidget {
   final VoidCallback onProfile;
@@ -709,6 +738,16 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
         _menuItem(Icons.person_outline_rounded, 'Perfil', 'profile'),
         _menuItem(Icons.edit_outlined, 'Editar perfil', 'edit'),
         const PopupMenuDivider(height: 1),
+        _menuItem(
+          Theme.of(context).brightness == Brightness.dark
+              ? Icons.light_mode_rounded
+              : Icons.dark_mode_rounded,
+          Theme.of(context).brightness == Brightness.dark
+              ? 'Mode clar'
+              : 'Mode fosc',
+          'toggle_theme',
+        ),
+        const PopupMenuDivider(height: 1),
         _menuItem(Icons.logout_rounded, 'Tancar sessió', 'logout',
             color: kErrorRed),
       ],
@@ -719,6 +758,8 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
           widget.onProfile();
         case 'edit':
           widget.onEdit();
+        case 'toggle_theme':
+          EntrevistatApp.themeNotifier.toggle();
         case 'logout':
           widget.onLogout();
       }
