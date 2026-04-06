@@ -21,6 +21,7 @@ class _LandingScreenState extends State<LandingScreen>
   late final AnimationController _stagger;
   late final List<Animation<double>> _heroFades;
   late final List<Animation<Offset>> _heroSlides;
+  bool _imagesPrecached = false;
 
   static const _heroItems = 4;
 
@@ -63,6 +64,20 @@ class _LandingScreenState extends State<LandingScreen>
           .animate(CurvedAnimation(
               parent: _stagger, curve: Interval(s, e, curve: Curves.easeOut)));
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_imagesPrecached) {
+      _imagesPrecached = true;
+      for (final i in _reviewAvatars) {
+        precacheImage(AssetImage('assets/images/avatar_$i.png'), context);
+      }
+      for (int i = 1; i <= 3; i++) {
+        precacheImage(AssetImage('assets/images/avatar_$i.png'), context);
+      }
+    }
   }
 
   @override
@@ -199,6 +214,11 @@ class _LandingScreenState extends State<LandingScreen>
                         'assets/images/avatar_${_reviewAvatars[i]}.png',
                         width: 28, height: 28,
                         fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 28, height: 28,
+                          color: review.color.withValues(alpha: 0.2),
+                          child: Icon(Icons.person, size: 16, color: review.color),
+                        ),
                       ),
                     ),
                   ),
@@ -333,6 +353,11 @@ class _LandingScreenState extends State<LandingScreen>
                         'assets/images/avatar_${i + 1}.png',
                         width: 34, height: 34,
                         fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 34, height: 34,
+                          color: colors[i].withValues(alpha: 0.2),
+                          child: Icon(Icons.person, size: 20, color: colors[i]),
+                        ),
                       ),
                     ),
                   ),

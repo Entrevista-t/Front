@@ -46,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _loading = true;
   bool _canScrollLeft = false;
   bool _canScrollRight = false;
+  bool _imagesPrecached = false;
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   late final AnimationController _entranceCtrl;
@@ -73,6 +74,16 @@ class _HomeScreenState extends State<HomeScreen>
     _scrollController.addListener(_updateScrollArrows);
     _load();
     _searchController.addListener(_filterCategories);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_imagesPrecached) {
+      _imagesPrecached = true;
+      precacheImage(
+        const AssetImage('assets/images/logo_entrevistat.png'), context);
+    }
   }
 
   @override
@@ -196,6 +207,11 @@ class _HomeScreenState extends State<HomeScreen>
               'assets/images/logo_entrevistat.png',
               width: 28, height: 28,
               fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.play_circle_filled,
+                size: 28,
+                color: kAccent,
+              ),
             ),
           ),
         ),
