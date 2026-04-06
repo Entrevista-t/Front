@@ -9,7 +9,7 @@ RUN flutter pub get
 COPY . .
 
 ARG API_URL
-RUN flutter build web --release --dart-define=API_URL=${API_URL}
+RUN flutter build web --release --no-tree-shake-icons --dart-define=API_URL=${API_URL}
 
 # Etapa runtime
 FROM nginx:alpine
