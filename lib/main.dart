@@ -112,14 +112,17 @@ class EntrevistatApp extends StatelessWidget {
           scrollBehavior: _SmoothScrollBehavior(),
           routerConfig: _router,
           builder: (context, child) {
+            final isNarrow =
+                MediaQuery.of(context).size.width < 600;
             return Stack(
               children: [
                 child!,
-                Positioned(
-                  right: 16,
-                  bottom: 16,
-                  child: _ThemeToggleBubble(),
-                ),
+                if (!isNarrow)
+                  Positioned(
+                    right: 16,
+                    bottom: 16,
+                    child: _ThemeToggleBubble(),
+                  ),
               ],
             );
           },

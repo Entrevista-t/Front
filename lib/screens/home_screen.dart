@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../main.dart' show EntrevistatApp;
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
@@ -45,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _loading = true;
   bool _canScrollLeft = false;
   bool _canScrollRight = false;
+  bool _imagesPrecached = false;
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   late final AnimationController _entranceCtrl;
@@ -75,6 +77,16 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_imagesPrecached) {
+      _imagesPrecached = true;
+      precacheImage(
+        const AssetImage('assets/images/logo_entrevistat.png'), context);
+    }
+  }
+
+  @override
   void dispose() {
     _entranceCtrl.dispose();
     _searchController.dispose();
@@ -82,21 +94,54 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
+  /// Strips diacritics for accent-insensitive search.
+  static String _removeDiacritics(String s) {
+    const withDiacritics =    'àáâãäåèéêëìíîïòóôõöùúûüýÿñçÀÁÂÃÄÅÈÉÊËÌÍÎÏÒÓÔÕÖÙÚÛÜÝŸÑÇ';
+    const withoutDiacritics = 'aaaaaaeeeeiiiioooooouuuuyynçAAAAAAEEEEIIIIOOOOOUUUUYYNC';
+    return s.split('').map((c) {
+      final i = withDiacritics.indexOf(c);
+      return i >= 0 ? withoutDiacritics[i] : c;
+    }).join();
+  }
+
   void _filterCategories() {
-    final q = _searchController.text.toLowerCase().trim();
-    setState(() {
-      if (q.isEmpty) {
-        _filteredCategories = _allCats;
-      } else {
-        _filteredCategories = _allCats
-            .where((c) => c.name.toLowerCase().contains(q))
-            .toList();
-      }
-    });
-    if (_scrollController.hasClients) {
-      _scrollController.jumpTo(0);
+    final q = _removeDiacritics(_searchController.text.toLowerCase().trim());
+    final previous = _filteredCategories;
+    List<InterviewCategory> updated;
+    if (q.isEmpty) {
+      updated = _allCats;
+    } else {
+      updated = _allCats
+          .where((c) =>
+              _removeDiacritics(c.name.toLowerCase()).contains(q))
+          .toList();
     }
-    _restartEntrance(_filteredCategories.length);
+    if (updated.length == previous.length &&
+        identical(updated, previous) == false &&
+        q.isEmpty &&
+        _searchController.text.isEmpty) {
+      return;
+    }
+    final changed = updated.length != previous.length ||
+        !_listsEqual(updated, previous);
+    setState(() {
+      _filteredCategories = updated;
+    });
+    if (changed) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+      _restartEntrance(_filteredCategories.length);
+    }
+  }
+
+  static bool _listsEqual(
+      List<InterviewCategory> a, List<InterviewCategory> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+    }
+    return true;
   }
 
   void _updateScrollArrows() {
@@ -143,6 +188,18 @@ class _HomeScreenState extends State<HomeScreen>
       backgroundColor: context.colors.bgBase,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leading: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = MediaQuery.of(context).size.width < 600;
+            if (isMobile) {
+              return Padding(
+                padding: const EdgeInsets.only(left: kS12),
+                child: _ThemeToggleButton(),
+              );
+            }
+            return const SizedBox(width: 48);
+          },
+        ),
         title: Center(
           child: GestureDetector(
             onTap: () => context.go('/landing'),
@@ -150,6 +207,11 @@ class _HomeScreenState extends State<HomeScreen>
               'assets/images/logo_entrevistat.png',
               width: 28, height: 28,
               fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.play_circle_filled,
+                size: 28,
+                color: kAccent,
+              ),
             ),
           ),
         ),
@@ -340,117 +402,148 @@ class _HomeScreenState extends State<HomeScreen>
             WidgetsBinding.instance
                 .addPostFrameCallback((_) => _updateScrollArrows());
 
+            final showMobileHint =
+                !showArrows && colCount > visibleCols;
+
             return Padding(
               padding: const EdgeInsets.symmetric(
                   horizontal: kPagePadding),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Left arrow
-                  if (showArrows)
-                    _GridArrow(
-                      icon: Icons.chevron_left_rounded,
-                      visible: _canScrollLeft,
-                      onTap: () => _scrollController.animateTo(
-                        (_scrollController.offset - columnExtent)
-                            .clamp(
-                                _scrollController
-                                    .position.minScrollExtent,
-                                _scrollController
-                                    .position.maxScrollExtent),
-                        duration: kDurationNormal,
-                        curve: kCurveEntrance,
-                      ),
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Left arrow
+                      if (showArrows)
+                        _GridArrow(
+                          icon: Icons.chevron_left_rounded,
+                          visible: _canScrollLeft,
+                          onTap: () => _scrollController.animateTo(
+                            (_scrollController.offset - columnExtent)
+                                .clamp(
+                                    _scrollController
+                                        .position.minScrollExtent,
+                                    _scrollController
+                                        .position.maxScrollExtent),
+                            duration: kDurationNormal,
+                            curve: kCurveEntrance,
+                          ),
+                        ),
 
-                  // Grid
-                  SizedBox(
-                    width: gridWidth,
-                    height: gridHeight,
-                    child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context)
-                          .copyWith(scrollbars: false),
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        scrollDirection: Axis.horizontal,
-                        physics: _ColumnSnapScrollPhysics(
-                            columnExtent: columnExtent,
-                            parent: const ClampingScrollPhysics()),
-                        padding: EdgeInsets.zero,
-                        itemCount: colCount,
-                        itemExtent: columnExtent,
-                        itemBuilder: (context, colIndex) {
-                          return Column(
-                            children: [
-                              SizedBox(height: hoverOverflow),
-                              ...List.generate(rows, (rowIndex) {
-                                final catIndex =
-                                    colIndex * rows + rowIndex;
-                                if (catIndex >= cats.length) {
-                                  return SizedBox(
-                                    width: cardWidth,
-                                    height: cardHeight,
-                                  );
-                                }
-                                final cat = cats[catIndex];
-                                final desc =
-                                    _catDescriptions[cat.id] ?? '';
-                                final currentMs =
-                                    _entranceCtrl.value * totalMs;
-                                final t = ((currentMs -
-                                            150.0 * catIndex) /
-                                        400.0)
-                                    .clamp(0.0, 1.0);
-                                final val =
-                                    kCurveEntrance.transform(t);
-
-                                return Padding(
-                                  padding: EdgeInsets.only(
-                                    bottom: rowIndex < rows - 1
-                                        ? spacing
-                                        : 0,
-                                  ),
-                                  child: Opacity(
-                                    opacity: val,
-                                    child: Transform.translate(
-                                      offset: Offset(
-                                          0, 12.0 * (1.0 - val)),
-                                      child: SizedBox(
+                      // Grid
+                      SizedBox(
+                        width: gridWidth,
+                        height: gridHeight,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context)
+                              .copyWith(scrollbars: false),
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            scrollDirection: Axis.horizontal,
+                            physics: _ColumnSnapScrollPhysics(
+                                columnExtent: columnExtent,
+                                parent: const ClampingScrollPhysics()),
+                            padding: EdgeInsets.zero,
+                            itemCount: colCount,
+                            itemExtent: columnExtent,
+                            itemBuilder: (context, colIndex) {
+                              return Column(
+                                children: [
+                                  SizedBox(height: hoverOverflow),
+                                  ...List.generate(rows, (rowIndex) {
+                                    final catIndex =
+                                        colIndex * rows + rowIndex;
+                                    if (catIndex >= cats.length) {
+                                      return SizedBox(
                                         width: cardWidth,
                                         height: cardHeight,
-                                        child: _CategoryCard(
-                                          category: cat,
-                                          description: desc,
-                                          onTap: () => context.go(
-                                            '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                                      );
+                                    }
+                                    final cat = cats[catIndex];
+                                    final desc =
+                                        _catDescriptions[cat.id] ?? '';
+                                    final currentMs =
+                                        _entranceCtrl.value * totalMs;
+                                    final t = ((currentMs -
+                                                150.0 * catIndex) /
+                                            400.0)
+                                        .clamp(0.0, 1.0);
+                                    final val =
+                                        kCurveEntrance.transform(t);
+
+                                    return Padding(
+                                      padding: EdgeInsets.only(
+                                        bottom: rowIndex < rows - 1
+                                            ? spacing
+                                            : 0,
+                                      ),
+                                      child: Opacity(
+                                        opacity: val,
+                                        child: Transform.translate(
+                                          offset: Offset(
+                                              0, 12.0 * (1.0 - val)),
+                                          child: SizedBox(
+                                            width: cardWidth,
+                                            height: cardHeight,
+                                            child: _CategoryCard(
+                                              category: cat,
+                                              description: desc,
+                                              onTap: () => context.go(
+                                                '/interview/${cat.id}?name=${Uri.encodeComponent(cat.name)}',
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                );
-                              }),
-                            ],
-                          );
-                        },
+                                    );
+                                  }),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
 
-                  // Right arrow
-                  if (showArrows)
-                    _GridArrow(
-                      icon: Icons.chevron_right_rounded,
-                      visible: _canScrollRight,
-                      onTap: () => _scrollController.animateTo(
-                        (_scrollController.offset + columnExtent)
-                            .clamp(
-                                _scrollController
-                                    .position.minScrollExtent,
-                                _scrollController
-                                    .position.maxScrollExtent),
-                        duration: kDurationNormal,
-                        curve: kCurveEntrance,
+                      // Right arrow
+                      if (showArrows)
+                        _GridArrow(
+                          icon: Icons.chevron_right_rounded,
+                          visible: _canScrollRight,
+                          onTap: () => _scrollController.animateTo(
+                            (_scrollController.offset + columnExtent)
+                                .clamp(
+                                    _scrollController
+                                        .position.minScrollExtent,
+                                    _scrollController
+                                        .position.maxScrollExtent),
+                            duration: kDurationNormal,
+                            curve: kCurveEntrance,
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (showMobileHint)
+                    Padding(
+                      padding: const EdgeInsets.only(top: kS8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.swipe_rounded,
+                              size: 14,
+                              color: context.colors.textTertiary),
+                          const SizedBox(width: kS4),
+                          Text(
+                            'Llisca per veure més categories',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  fontSize: 12,
+                                  color: context.colors.textTertiary,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -614,6 +707,30 @@ class _GridArrow extends StatelessWidget {
   }
 }
 
+// ── AppBar theme toggle button ─────────────────────────────────────────────
+class _ThemeToggleButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: () => EntrevistatApp.themeNotifier.toggle(),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: kAccent.withValues(alpha: 0.08),
+        ),
+        child: Icon(
+          isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+          size: 16,
+          color: context.colors.textSecondary,
+        ),
+      ),
+    );
+  }
+}
+
 // ── Profile avatar with hover animation + styled popup menu ────────────────
 class _ProfileMenuButton extends StatefulWidget {
   final VoidCallback onProfile;
@@ -678,6 +795,16 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
         _menuItem(Icons.person_outline_rounded, 'Perfil', 'profile'),
         _menuItem(Icons.edit_outlined, 'Editar perfil', 'edit'),
         const PopupMenuDivider(height: 1),
+        _menuItem(
+          Theme.of(context).brightness == Brightness.dark
+              ? Icons.light_mode_rounded
+              : Icons.dark_mode_rounded,
+          Theme.of(context).brightness == Brightness.dark
+              ? 'Mode clar'
+              : 'Mode fosc',
+          'toggle_theme',
+        ),
+        const PopupMenuDivider(height: 1),
         _menuItem(Icons.logout_rounded, 'Tancar sessió', 'logout',
             color: kErrorRed),
       ],
@@ -688,6 +815,8 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
           widget.onProfile();
         case 'edit':
           widget.onEdit();
+        case 'toggle_theme':
+          EntrevistatApp.themeNotifier.toggle();
         case 'logout':
           widget.onLogout();
       }
