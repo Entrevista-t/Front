@@ -24,8 +24,6 @@ class _ResultsScreenState extends State<ResultsScreen>
     with TickerProviderStateMixin {
   InterviewResult? _result;
   bool _loading = true;
-  bool _downloading = false;
-
   // Animated score circles controller
   late final AnimationController _scoreCtrl;
 
@@ -93,26 +91,6 @@ class _ResultsScreenState extends State<ResultsScreen>
     }
   }
 
-  Future<void> _downloadPdf() async {
-    setState(() { _downloading = true; });
-    try {
-      await ApiService.downloadPdf(widget.sessionId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PDF descarregat correctament')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-        );
-      }
-    } finally {
-      setState(() { _downloading = false; });
-    }
-  }
-
   /// Wraps a section widget with staggered fade + slide entrance.
   Widget _entrance(int index, Widget child) {
     return SlideTransition(
@@ -148,28 +126,7 @@ class _ResultsScreenState extends State<ResultsScreen>
           onPressed: () => context.go('/home'),
         ),
         title: const Text('Informe'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: kS8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: kAccent.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(kRadiusSm),
-              ),
-              child: IconButton(
-                icon: _downloading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.picture_as_pdf_rounded),
-                onPressed: _downloading ? null : _downloadPdf,
-                tooltip: 'Descarregar PDF',
-              ),
-            ),
-          ),
-        ],
+        actions: const [],
       ),
       body: ListView(
         padding: const EdgeInsets.all(kPagePadding),
@@ -180,7 +137,7 @@ class _ResultsScreenState extends State<ResultsScreen>
           const SizedBox(height: kS16),
           _entrance(2, _buildStrengthsWeaknessesChart(r)),
           const SizedBox(height: kS16),
-          _entrance(3, _buildAiFeedback(r)),
+          _entrance(3, _buildTranscript(r)),
           const SizedBox(height: kS16),
           _entrance(4, _buildDetailCards(r)),
           const SizedBox(height: kS16),
@@ -199,9 +156,7 @@ class _ResultsScreenState extends State<ResultsScreen>
   Widget _buildCategoryHeader(InterviewResult r) {
     return Row(
       children: [
-        AppChip(r.categoryName),
-        const SizedBox(width: kS8),
-        Text(r.formattedDate, style: Theme.of(context).textTheme.bodySmall),
+        AppChip('Puntuacio global: ${r.overallScore.toStringAsFixed(0)}%'),
       ],
     );
   }
@@ -291,7 +246,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                       showTitles: true,
                       reservedSize: 28,
                       getTitlesWidget: (value, _) {
-                        const labels = ['Cont.', 'Fluï.', 'Mirad.', 'Estr.', 'Conf.'];
+                        const labels = ['Cont.', 'Fluï.', 'Lèxic', 'Estr.', 'Conf.'];
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
@@ -308,7 +263,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                 barGroups: [
                   _bar(0, r.contentScore),
                   _bar(1, r.fluencyScore),
-                  _bar(2, r.eyeContactPercent),
+                  _bar(2, r.lexicalScore),
                   _bar(3, r.structureScore),
                   _bar(4, r.confidenceScore),
                 ],
@@ -335,7 +290,7 @@ class _ResultsScreenState extends State<ResultsScreen>
     ]);
   }
 
-  Widget _buildAiFeedback(InterviewResult r) {
+  Widget _buildTranscript(InterviewResult r) {
     final radius = BorderRadius.circular(kRadiusMd);
     return Container(
       decoration: BoxDecoration(
@@ -353,13 +308,13 @@ class _ResultsScreenState extends State<ResultsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              const Icon(Icons.auto_awesome_rounded, color: kAccent, size: 18),
+              const Icon(Icons.text_snippet_rounded, color: kAccent, size: 18),
               const SizedBox(width: kS8),
-              AppSectionHeader(title: 'Feedback IA'),
+              AppSectionHeader(title: 'Transcripcio'),
             ]),
             const SizedBox(height: kS12),
             Text(
-              r.aiFeedback,
+              r.transcript ?? 'No disponible',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: context.colors.textSecondary, height: 1.6,
               ),
@@ -373,21 +328,13 @@ class _ResultsScreenState extends State<ResultsScreen>
   Widget _buildDetailCards(InterviewResult r) {
     return Row(
       children: [
-        Expanded(
-          child: _miniCard(r.wordsPerMinute.toStringAsFixed(0), 'ppm', Icons.speed_rounded),
-        ),
+        Expanded(child: _miniCard(r.wordsPerMinute.toStringAsFixed(0), 'ppm', Icons.speed_rounded)),
         const SizedBox(width: kS8),
-        Expanded(
-          child: _miniCard('${r.eyeContactPercent.toStringAsFixed(0)}%', 'contacte visual', Icons.visibility_rounded),
-        ),
+        Expanded(child: _miniCard('${r.speechRatio.toStringAsFixed(0)}%', 'temps de parla', Icons.mic_rounded)),
         const SizedBox(width: kS8),
-        Expanded(
-          child: _miniCard('${r.excessivePauses}', 'pauses llargues', Icons.pause_rounded),
-        ),
+        Expanded(child: _miniCard(r.dominantEmotion ?? '-', 'emocio', Icons.face_rounded)),
         const SizedBox(width: kS8),
-        Expanded(
-          child: _miniCard('${r.fillerWordsCount}', 'paraules falca', Icons.record_voice_over_rounded),
-        ),
+        Expanded(child: _miniCard('${r.lexicalScore.toStringAsFixed(0)}%', 'riquesa lexica', Icons.auto_stories_rounded)),
       ],
     );
   }
@@ -437,27 +384,20 @@ class _ResultsScreenState extends State<ResultsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSectionHeader(title: 'Resum'),
+          AppSectionHeader(title: 'Detall de metriques'),
           const SizedBox(height: kS12),
           const Divider(),
-          ...r.strengths.asMap().entries.map((e) => _reportItem(
-                'Punt fort ${e.key + 1}',
-                e.value,
-                kScoreGood,
-                Icons.check_circle_outline_rounded,
-              )),
-          ...r.improvements.asMap().entries.map((e) => _reportItem(
-                'A millorar ${e.key + 1}',
-                e.value,
-                kScoreMid,
-                Icons.arrow_upward_rounded,
-              )),
+          _reportItem('Alineacio amb la pregunta', (r.questionAlignment ?? 0).toStringAsFixed(2), kAccent, Icons.track_changes_rounded),
+          _reportItem('Coherencia del discurs', (r.discourseCoherence ?? 0).toStringAsFixed(2), kAccent, Icons.linear_scale_rounded),
+          _reportItem('Densitat informativa', (r.informationDensity ?? 0).toStringAsFixed(2), kAccent, Icons.density_medium_rounded),
+          _reportItem("Index d'especificitat", (r.specificityIndex ?? 0).toStringAsFixed(2), kAccent, Icons.precision_manufacturing_rounded),
+          _reportItem('Consistencia emocional', (r.emotionalConsistency ?? 0).toStringAsFixed(2), kAccent, Icons.psychology_rounded),
         ],
       ),
     );
   }
 
-  Widget _reportItem(String title, String subtitle, Color color, IconData icon) {
+  Widget _reportItem(String label, String value, Color color, IconData icon) {
     return Column(
       children: [
         const SizedBox(height: kS12),
@@ -473,18 +413,12 @@ class _ResultsScreenState extends State<ResultsScreen>
             ),
             const SizedBox(width: kS12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: kS4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+              child: Text(label, style: Theme.of(context).textTheme.titleSmall),
+            ),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: color,
               ),
             ),
           ],

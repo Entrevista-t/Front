@@ -39,33 +39,41 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _name = prefs.getString('user_name') ?? 'Usuari';
-      _email = prefs.getString('user_email') ?? 'usuari@entrevistat.com';
-    });
+    try {
+      final profile = await ApiService.getUserProfile();
+      setState(() {
+        _name = profile['nom'] as String? ?? 'Usuari';
+        _email = profile['email'] as String? ?? '';
+      });
+    } catch (_) {
+      // Fall back to cached values
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _name = prefs.getString('user_name') ?? 'Usuari';
+        _email = prefs.getString('user_email') ?? '';
+      });
+    }
     try {
       final sessions = await ApiService.getRecentSessions();
       setState(() { _sessions = sessions; });
-    } catch (_) {
-      // sense sessions
-    } finally {
-      setState(() { _loading = false; });
-      _statsCtrl.forward();
-      _listCtrl
-        ..duration = Duration(milliseconds: 600 + 100 * _sessions.length)
-        ..forward();
-    }
+    } catch (_) {}
+    setState(() { _loading = false; });
+    _statsCtrl.forward();
+    _listCtrl
+      ..duration = Duration(milliseconds: 600 + 100 * _sessions.length)
+      ..forward();
   }
 
   double get _avgScore {
-    if (_sessions.isEmpty) return 0;
-    return _sessions.map((s) => s.overallScore).reduce((a, b) => a + b) / _sessions.length;
+    final completed = _sessions.where((s) => s.overallScore != null).toList();
+    if (completed.isEmpty) return 0;
+    return completed.map((s) => s.overallScore!).reduce((a, b) => a + b) / completed.length;
   }
 
   String get _bestCategory {
-    if (_sessions.isEmpty) return '-';
-    return _sessions.reduce((a, b) => a.overallScore > b.overallScore ? a : b).categoryName;
+    final completed = _sessions.where((s) => s.isCompleted).toList();
+    if (completed.isEmpty) return '-';
+    return 'Completades: ${completed.length}';
   }
 
   @override
@@ -188,7 +196,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         const SizedBox(width: kS12),
         Expanded(child: _statCard('${_avgScore.toInt()}%', 'Puntuació\nmitja', Icons.bar_chart_rounded, isNumeric: true)),
         const SizedBox(width: kS12),
-        Expanded(child: _statCard(_bestCategory, 'Millor\ncategoria', Icons.star_outline_rounded)),
+        Expanded(child: _statCard(_bestCategory, 'Millor\nresultat', Icons.star_outline_rounded)),
       ],
     );
   }

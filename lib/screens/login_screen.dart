@@ -324,30 +324,32 @@ class _LoginScreenState extends State<LoginScreen>
         ),
 
         // ── "or" divider ───────────────────────────────────
-        const SizedBox(height: kS20),
-        _buildOrDivider(),
-        const SizedBox(height: kS20),
+        // TODO: Uncomment when GitHub/Google OAuth is implemented
+        // const SizedBox(height: kS20),
+        // _buildOrDivider(),
+        // const SizedBox(height: kS20),
 
         // ── Social buttons ─────────────────────────────────
-        Row(
-          children: [
-            Expanded(
-              child: _SocialButton(
-                icon: Icons.code_rounded,
-                label: 'GitHub',
-                onTap: () {},
-              ),
-            ),
-            const SizedBox(width: kS12),
-            Expanded(
-              child: _SocialButton(
-                icon: Icons.g_mobiledata_rounded,
-                label: 'Google',
-                onTap: () {},
-              ),
-            ),
-          ],
-        ),
+        // TODO: Uncomment when GitHub/Google OAuth is implemented
+        // Row(
+        //   children: [
+        //     Expanded(
+        //       child: _SocialButton(
+        //         icon: Icons.code_rounded,
+        //         label: 'GitHub',
+        //         onTap: () {},
+        //       ),
+        //     ),
+        //     const SizedBox(width: kS12),
+        //     Expanded(
+        //       child: _SocialButton(
+        //         icon: Icons.g_mobiledata_rounded,
+        //         label: 'Google',
+        //         onTap: () {},
+        //       ),
+        //     ),
+        //   ],
+        // ),
 
         // ── Toggle footer ──────────────────────────────────
         const SizedBox(height: kS24),
@@ -508,97 +510,99 @@ class _LoginScreenState extends State<LoginScreen>
   // "OR" DIVIDER
   // ══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildOrDivider() {
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(
-              color: context.colors.borderSubtle, thickness: 0.5)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: kS12),
-          child: Text(
-            'o',
-            style: TextStyle(
-              fontFamily: kFontSans,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: context.colors.textDisabled,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Divider(
-              color: context.colors.borderSubtle, thickness: 0.5)),
-      ],
-    );
-  }
+  // TODO: Uncomment when GitHub/Google OAuth is implemented
+  // Widget _buildOrDivider() {
+  //   return Row(
+  //     children: [
+  //       Expanded(
+  //         child: Divider(
+  //             color: context.colors.borderSubtle, thickness: 0.5)),
+  //       Padding(
+  //         padding: const EdgeInsets.symmetric(horizontal: kS12),
+  //         child: Text(
+  //           'o',
+  //           style: TextStyle(
+  //             fontFamily: kFontSans,
+  //             fontSize: 12,
+  //             fontWeight: FontWeight.w500,
+  //             color: context.colors.textDisabled,
+  //             letterSpacing: 1.5,
+  //           ),
+  //         ),
+  //       ),
+  //       Expanded(
+  //         child: Divider(
+  //             color: context.colors.borderSubtle, thickness: 0.5)),
+  //     ],
+  //   );
+  // }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Social login button
+// TODO: Uncomment when GitHub/Google OAuth is implemented
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _SocialButton extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _SocialButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  State<_SocialButton> createState() => _SocialButtonState();
-}
-
-class _SocialButtonState extends State<_SocialButton> {
-  bool _hovering = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: kDurationFast,
-          curve: kCurveHover,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: _hovering
-                ? context.colors.bgSurface
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(kRadiusMd),
-            border: Border.all(
-              color: _hovering
-                  ? context.colors.borderStrong
-                  : context.colors.borderSubtle,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(widget.icon,
-                  size: 20, color: context.colors.textSecondary),
-              const SizedBox(width: 8),
-              Text(
-                widget.label,
-                style: TextStyle(
-                  fontFamily: kFontSans,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: context.colors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+// class _SocialButton extends StatefulWidget {
+//   final IconData icon;
+//   final String label;
+//   final VoidCallback onTap;
+//
+//   const _SocialButton({
+//     required this.icon,
+//     required this.label,
+//     required this.onTap,
+//   });
+//
+//   @override
+//   State<_SocialButton> createState() => _SocialButtonState();
+// }
+//
+// class _SocialButtonState extends State<_SocialButton> {
+//   bool _hovering = false;
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return MouseRegion(
+//       cursor: SystemMouseCursors.click,
+//       onEnter: (_) => setState(() => _hovering = true),
+//       onExit: (_) => setState(() => _hovering = false),
+//       child: GestureDetector(
+//         onTap: widget.onTap,
+//         child: AnimatedContainer(
+//           duration: kDurationFast,
+//           curve: kCurveHover,
+//           padding: const EdgeInsets.symmetric(vertical: 12),
+//           decoration: BoxDecoration(
+//             color: _hovering
+//                 ? context.colors.bgSurface
+//                 : Colors.transparent,
+//             borderRadius: BorderRadius.circular(kRadiusMd),
+//             border: Border.all(
+//               color: _hovering
+//                   ? context.colors.borderStrong
+//                   : context.colors.borderSubtle,
+//             ),
+//           ),
+//           child: Row(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             children: [
+//               Icon(widget.icon,
+//                   size: 20, color: context.colors.textSecondary),
+//               const SizedBox(width: 8),
+//               Text(
+//                 widget.label,
+//                 style: TextStyle(
+//                   fontFamily: kFontSans,
+//                   fontSize: 14,
+//                   fontWeight: FontWeight.w500,
+//                   color: context.colors.textSecondary,
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }

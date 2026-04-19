@@ -95,10 +95,8 @@ class _InterviewScreenState extends State<InterviewScreen>
 
   Future<void> _loadQuestion() async {
     try {
-      final questions = await ApiService.getQuestions(widget.categoryId);
-      setState(() {
-        _question = questions.isNotEmpty ? questions.first : Question.fallback().first;
-      });
+      final question = await ApiService.getRandomQuestion(widget.categoryId);
+      setState(() { _question = question; });
     } catch (_) {
       setState(() { _question = Question.fallback().first; });
     }
@@ -182,12 +180,12 @@ class _InterviewScreenState extends State<InterviewScreen>
     setState(() { _recording = false; _uploading = true; });
     try {
       final file = await camera.stopVideoRecording();
-      final sessionId = await ApiService.submitInterview(
-        categoryId: widget.categoryId,
+      final interviewId = await ApiService.submitInterview(
         questionId: question.id,
+        questionText: question.text,
         videoPath: file.path,
       );
-      if (mounted) context.go('/report-sent/$sessionId');
+      if (mounted) context.go('/report-sent/$interviewId');
     } catch (e) {
       setState(() { _uploading = false; _error = 'Error en enviar la gravació: $e'; });
     }

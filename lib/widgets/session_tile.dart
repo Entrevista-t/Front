@@ -12,8 +12,27 @@ class SessionTile extends StatelessWidget {
 
   const SessionTile({super.key, required this.session, this.onTap});
 
+  IconData get _statusIcon {
+    switch (session.status) {
+      case 'completat': return Icons.check_circle_outline_rounded;
+      case 'processant': return Icons.hourglass_top_rounded;
+      case 'error': return Icons.error_outline_rounded;
+      default: return Icons.schedule_rounded;
+    }
+  }
+
+  Color _statusColor(BuildContext context) {
+    switch (session.status) {
+      case 'completat': return kScoreGood;
+      case 'processant': return kAccent;
+      case 'error': return kScoreLow;
+      default: return context.colors.textTertiary;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final score = session.overallScore;
     return Container(
       margin: const EdgeInsets.only(bottom: kS8),
       decoration: BoxDecoration(
@@ -25,14 +44,18 @@ class SessionTile extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(
           horizontal: kS16, vertical: kS4,
         ),
-        leading: ScoreBadge(score: session.overallScore),
+        leading: score != null
+            ? ScoreBadge(score: score)
+            : Icon(_statusIcon, color: _statusColor(context), size: 28),
         title: Text(
-          session.categoryName,
+          'Entrevista ${session.formattedDate}',
           style: Theme.of(context).textTheme.titleSmall,
         ),
         subtitle: Text(
-          session.formattedDate,
-          style: Theme.of(context).textTheme.bodySmall,
+          session.statusLabel,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: _statusColor(context),
+          ),
         ),
         trailing: Icon(Icons.chevron_right, color: context.colors.textSecondary, size: 20),
         onTap: onTap,

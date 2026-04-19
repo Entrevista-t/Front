@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../main.dart' show EntrevistatApp;
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
@@ -21,24 +20,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with TickerProviderStateMixin {
-  static const _catDescriptions = {
-    'software': 'Algorismes, arquitectura i sistemes',
-    'data': 'Anàlisi de dades i machine learning',
-    'design': 'UX/UI, prototipatge i recerca',
-    'management': 'Lideratge, àgil i planificació',
-    'marketing': 'Estratègia digital i xarxes',
-    'general': 'Competències transversals',
-    'finance': 'Comptabilitat, inversió i auditoria',
-    'sales': 'Estratègies comercials i negociació',
-    'hr': 'Selecció, formació i cultura',
-    'legal': 'Normativa, contractes i compliance',
-    'healthcare': 'Diagnòstic, recerca i atenció',
-    'education': 'Pedagogia, formació i didàctica',
-    'devops': 'CI/CD, infraestructura i cloud',
-    'cybersecurity': 'Seguretat, xarxes i criptografia',
-    'product': 'Roadmap, mètriques i discovery',
-    'communication': 'Oratòria, mitjans i redacció',
-  };
 
   List<InterviewCategory> _categories = [];
   List<InterviewCategory> _filteredCategories = [];
@@ -53,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   String get _greeting {
     final hour = DateTime.now().hour;
-    final name = ApiService.devUserName ?? 'Usuari';
+    final name = ApiService.userName ?? 'Usuari';
     if (hour < 12) return 'Bon dia, $name';
     if (hour < 20) return 'Bona tarda, $name';
     return 'Bona nit, $name';
@@ -178,8 +159,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   double get _averageScore {
-    if (_recentSessions.isEmpty) return 0;
-    return _recentSessions.map((s) => s.overallScore).reduce((a, b) => a + b) / _recentSessions.length;
+    final completed = _recentSessions.where((s) => s.overallScore != null).toList();
+    if (completed.isEmpty) return 0;
+    return completed.map((s) => s.overallScore!).reduce((a, b) => a + b) / completed.length;
   }
 
   @override
@@ -188,18 +170,7 @@ class _HomeScreenState extends State<HomeScreen>
       backgroundColor: context.colors.bgBase,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: LayoutBuilder(
-          builder: (context, constraints) {
-            final isMobile = MediaQuery.of(context).size.width < 600;
-            if (isMobile) {
-              return Padding(
-                padding: const EdgeInsets.only(left: kS12),
-                child: _ThemeToggleButton(),
-              );
-            }
-            return const SizedBox(width: 48);
-          },
-        ),
+        leading: const SizedBox(width: 48),
         title: Center(
           child: GestureDetector(
             onTap: () => context.go('/landing'),
@@ -362,6 +333,9 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     final totalMs = (150 * (cats.length - 1) + 400).clamp(400, 2000);
+    // Per-item stagger scales with clamped duration so every item
+    // reaches full opacity when the animation completes.
+    final stagger = cats.length <= 1 ? 0.0 : (totalMs - 400) / (cats.length - 1);
     const rows = 2;
     const spacing = kS16;
     const hoverOverflow = 6.0;
@@ -443,12 +417,15 @@ class _HomeScreenState extends State<HomeScreen>
                             scrollDirection: Axis.horizontal,
                             physics: _ColumnSnapScrollPhysics(
                                 columnExtent: columnExtent,
+                                trailingGap: spacing,
                                 parent: const ClampingScrollPhysics()),
                             padding: EdgeInsets.zero,
                             itemCount: colCount,
-                            itemExtent: columnExtent,
                             itemBuilder: (context, colIndex) {
-                              return Column(
+                              final isLastCol = colIndex == colCount - 1;
+                              return SizedBox(
+                                width: isLastCol ? cardWidth : columnExtent,
+                                child: Column(
                                 children: [
                                   SizedBox(height: hoverOverflow),
                                   ...List.generate(rows, (rowIndex) {
@@ -462,11 +439,11 @@ class _HomeScreenState extends State<HomeScreen>
                                     }
                                     final cat = cats[catIndex];
                                     final desc =
-                                        _catDescriptions[cat.id] ?? '';
+                                        cat.description ?? '';
                                     final currentMs =
                                         _entranceCtrl.value * totalMs;
                                     final t = ((currentMs -
-                                                150.0 * catIndex) /
+                                                stagger * catIndex) /
                                             400.0)
                                         .clamp(0.0, 1.0);
                                     final val =
@@ -499,6 +476,7 @@ class _HomeScreenState extends State<HomeScreen>
                                     );
                                   }),
                                 ],
+                              ),
                               );
                             },
                           ),
@@ -707,30 +685,6 @@ class _GridArrow extends StatelessWidget {
   }
 }
 
-// ── AppBar theme toggle button ─────────────────────────────────────────────
-class _ThemeToggleButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: () => EntrevistatApp.themeNotifier.toggle(),
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: kAccent.withValues(alpha: 0.08),
-        ),
-        child: Icon(
-          isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-          size: 16,
-          color: context.colors.textSecondary,
-        ),
-      ),
-    );
-  }
-}
-
 // ── Profile avatar with hover animation + styled popup menu ────────────────
 class _ProfileMenuButton extends StatefulWidget {
   final VoidCallback onProfile;
@@ -795,16 +749,6 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
         _menuItem(Icons.person_outline_rounded, 'Perfil', 'profile'),
         _menuItem(Icons.edit_outlined, 'Editar perfil', 'edit'),
         const PopupMenuDivider(height: 1),
-        _menuItem(
-          Theme.of(context).brightness == Brightness.dark
-              ? Icons.light_mode_rounded
-              : Icons.dark_mode_rounded,
-          Theme.of(context).brightness == Brightness.dark
-              ? 'Mode clar'
-              : 'Mode fosc',
-          'toggle_theme',
-        ),
-        const PopupMenuDivider(height: 1),
         _menuItem(Icons.logout_rounded, 'Tancar sessió', 'logout',
             color: kErrorRed),
       ],
@@ -815,8 +759,6 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
           widget.onProfile();
         case 'edit':
           widget.onEdit();
-        case 'toggle_theme':
-          EntrevistatApp.themeNotifier.toggle();
         case 'logout':
           widget.onLogout();
       }
@@ -889,9 +831,11 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
 // ── Scroll physics that snaps to column boundaries ─────────────────────────
 class _ColumnSnapScrollPhysics extends ScrollPhysics {
   final double columnExtent;
+  final double trailingGap;
 
   const _ColumnSnapScrollPhysics({
     required this.columnExtent,
+    this.trailingGap = 0,
     super.parent,
   });
 
@@ -899,6 +843,7 @@ class _ColumnSnapScrollPhysics extends ScrollPhysics {
   _ColumnSnapScrollPhysics applyTo(ScrollPhysics? ancestor) {
     return _ColumnSnapScrollPhysics(
       columnExtent: columnExtent,
+      trailingGap: trailingGap,
       parent: buildParent(ancestor),
     );
   }
@@ -910,6 +855,7 @@ class _ColumnSnapScrollPhysics extends ScrollPhysics {
   @override
   Simulation? createBallisticSimulation(
       ScrollMetrics position, double velocity) {
+    final effectiveMax = position.maxScrollExtent;
     if ((velocity.abs() < toleranceFor(position).velocity) &&
         (position.pixels - _snapToColumn(position.pixels)).abs() <
             toleranceFor(position).distance) {
@@ -922,7 +868,7 @@ class _ColumnSnapScrollPhysics extends ScrollPhysics {
           : velocity < 0
               ? position.pixels - columnExtent * 0.5
               : position.pixels,
-    ).clamp(position.minScrollExtent, position.maxScrollExtent);
+    ).clamp(position.minScrollExtent, effectiveMax);
 
     if (target == position.pixels) return null;
 
