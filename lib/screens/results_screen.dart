@@ -24,6 +24,7 @@ class _ResultsScreenState extends State<ResultsScreen>
     with TickerProviderStateMixin {
   InterviewResult? _result;
   bool _loading = true;
+  String? _error;
   // Animated score circles controller
   late final AnimationController _scoreCtrl;
 
@@ -82,12 +83,14 @@ class _ResultsScreenState extends State<ResultsScreen>
     try {
       final r = await ApiService.getResults(widget.sessionId);
       setState(() { _result = r; });
-    } catch (_) {
-      setState(() { _result = InterviewResult.mock(); });
+    } catch (e) {
+      setState(() { _error = e.toString().replaceAll('Exception: ', ''); });
     } finally {
       setState(() { _loading = false; });
-      _scoreCtrl.forward();
-      _staggerCtrl.forward();
+      if (_result != null) {
+        _scoreCtrl.forward();
+        _staggerCtrl.forward();
+      }
     }
   }
 
@@ -114,6 +117,57 @@ class _ResultsScreenState extends State<ResultsScreen>
             Text('Obtenint resultats de la IA...'),
           ],
         )),
+      );
+    }
+
+    if (_error != null || _result == null) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.home_rounded),
+            onPressed: () => context.go('/home'),
+          ),
+          title: const Text('Informe'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(kS32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.hourglass_top_rounded, size: 64, color: kAccent.withValues(alpha: 0.6)),
+                const SizedBox(height: kS24),
+                Text(
+                  "L'anàlisi encara s'està processant",
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: kS12),
+                Text(
+                  _error ?? "Els resultats estaran disponibles en uns minuts.\nRebràs una notificació quan estiguin llestos.",
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.colors.textSecondary, height: 1.6,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: kS32),
+                ElevatedButton.icon(
+                  onPressed: () => context.go('/home'),
+                  icon: const Icon(Icons.home_rounded, size: 20),
+                  label: const Text("Tornar a l'inici"),
+                ),
+                const SizedBox(height: kS12),
+                TextButton(
+                  onPressed: () {
+                    setState(() { _loading = true; _error = null; });
+                    _load();
+                  },
+                  child: const Text('Tornar a intentar'),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 

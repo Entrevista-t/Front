@@ -85,7 +85,7 @@ class _ReportSentScreenState extends State<ReportSentScreen>
                 ),
                 const SizedBox(height: kS16),
                 Text(
-                  "El teu video s'esta analitzant.\nEls resultats estaran disponibles en pocs minuts.",
+                  "El teu vídeo s'ha enviat correctament.\nEls resultats estaran disponibles en pocs minuts\ni els rebràs per correu electrònic.",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.6),
                   textAlign: TextAlign.center,
                 ),

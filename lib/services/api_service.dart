@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -298,7 +299,9 @@ class ApiService {
     }
     final interviewId = jsonDecode(createRes.body)['id'].toString();
 
-    // Step 2: Upload video for analysis
+    // Step 2: Upload video for analysis (fire-and-forget)
+    // The backend processes synchronously, which can take minutes.
+    // We send the request and return immediately so the user isn't blocked.
     final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/analyze'));
     request.headers['Authorization'] = 'Bearer $_token';
     request.fields['question'] = questionText;
@@ -313,12 +316,15 @@ class ApiService {
       filename: fileName,
       contentType: MediaType('video', mimeSubtype),
     ));
-    final streamed = await request.send();
-    final analyzeRes = await http.Response.fromStream(streamed);
-    if (analyzeRes.statusCode != 200) {
-      await _guard(analyzeRes);
-      throw Exception('Error analitzant el video (${analyzeRes.statusCode})');
-    }
+    // Fire the request without awaiting the response — browser keeps it alive
+    request.send().then((streamed) async {
+      final res = await http.Response.fromStream(streamed);
+      if (res.statusCode != 200) {
+        developer.log('Analyze failed (${res.statusCode}): ${res.body}');
+      }
+    }).catchError((e) {
+      developer.log('Analyze request error: $e');
+    });
     return interviewId;
   }
 
