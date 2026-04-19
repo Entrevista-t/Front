@@ -558,6 +558,8 @@ class _HomeScreenState extends State<HomeScreen>
           iconSize: 20,
         ),
         const SizedBox(width: kS12),
+        Text('Puntuació Mitjana: ',
+            style: Theme.of(context).textTheme.bodySmall),
         Text('${_averageScore.toInt()}%',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(color: kAccent)),
         const SizedBox(width: kS8),

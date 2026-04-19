@@ -70,12 +70,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     return completed.map((s) => s.overallScore!).reduce((a, b) => a + b) / completed.length;
   }
 
-  String get _bestCategory {
-    final completed = _sessions.where((s) => s.isCompleted).toList();
-    if (completed.isEmpty) return '-';
-    return 'Completades: ${completed.length}';
-  }
-
   @override
   void dispose() {
     _statsCtrl.dispose();
@@ -107,8 +101,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               padding: const EdgeInsets.all(kPagePadding),
               children: [
                 _buildUserCard(),
-                const SizedBox(height: kS16),
-                _buildStatsRow(),
                 const SizedBox(height: kS32),
                 AppSectionHeader(title: 'Informes passats'),
                 const SizedBox(height: kS16),
@@ -183,21 +175,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ],
               ),
             ),
+            const SizedBox(width: kS12),
+            _statCard('${_sessions.length}', 'Sessions', Icons.videocam_outlined, isNumeric: true),
+            const SizedBox(width: kS12),
+            _statCard('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded, isNumeric: true),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildStatsRow() {
-    return Row(
-      children: [
-        Expanded(child: _statCard('${_sessions.length}', 'Sessions', Icons.videocam_outlined, isNumeric: true)),
-        const SizedBox(width: kS12),
-        Expanded(child: _statCard('${_avgScore.toInt()}%', 'Puntuació\nmitja', Icons.bar_chart_rounded, isNumeric: true)),
-        const SizedBox(width: kS12),
-        Expanded(child: _statCard(_bestCategory, 'Millor\nresultat', Icons.star_outline_rounded)),
-      ],
     );
   }
 
