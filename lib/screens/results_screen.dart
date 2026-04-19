@@ -251,7 +251,7 @@ class _ResultsScreenState extends State<ResultsScreen>
         return Column(
           children: [
             SizedBox(
-              width: 100, height: 100,
+              width: 130, height: 130,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -264,7 +264,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                   ),
                   Text(
                     '${(animValue * 100).toInt()}%',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ],
               ),
@@ -387,7 +387,7 @@ class _ResultsScreenState extends State<ResultsScreen>
         const SizedBox(width: kS8),
         Expanded(child: _miniCard('${r.speechRatio.toStringAsFixed(0)}%', 'temps de parla', Icons.mic_rounded)),
         const SizedBox(width: kS8),
-        Expanded(child: _miniCard(r.dominantEmotion ?? '-', 'emocio', Icons.face_rounded)),
+        Expanded(child: _miniCard(_emotionLabel(r.dominantEmotion), 'emoció', Icons.face_rounded)),
         const SizedBox(width: kS8),
         Expanded(child: _miniCard('${r.lexicalScore.toStringAsFixed(0)}%', 'riquesa lexica', Icons.auto_stories_rounded)),
       ],
@@ -502,5 +502,16 @@ class _ResultsScreenState extends State<ResultsScreen>
         const Divider(),
       ],
     );
+  }
+
+  static const _emotionTranslations = {
+    'positive': 'Positiva',
+    'neutral': 'Neutral',
+    'tense': 'Tensa',
+  };
+
+  String _emotionLabel(String? emotion) {
+    if (emotion == null) return '-';
+    return _emotionTranslations[emotion.toLowerCase()] ?? emotion;
   }
 }
