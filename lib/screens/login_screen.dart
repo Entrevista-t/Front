@@ -512,15 +512,7 @@ class _LoginScreenState extends State<LoginScreen>
                   color: context.colors.textTertiary,
                 ),
                 children: [
-                  const TextSpan(text: 'Accepto els '),
-                  TextSpan(
-                    text: "Termes d'ús",
-                    style: const TextStyle(
-                        color: kAccent, fontWeight: FontWeight.w600),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () => context.go('/faq'),
-                  ),
-                  const TextSpan(text: ' i la '),
+                  const TextSpan(text: 'Accepto la '),
                   TextSpan(
                     text: 'Política de privacitat',
                     style: const TextStyle(

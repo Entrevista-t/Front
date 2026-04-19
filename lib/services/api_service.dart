@@ -281,7 +281,8 @@ class ApiService {
   static Future<String> submitInterview({
     required String questionId,
     required String questionText,
-    required String videoPath,
+    required List<int> videoBytes,
+    required String fileName,
   }) async {
     await _loadToken();
 
@@ -303,9 +304,10 @@ class ApiService {
     request.fields['question'] = questionText;
     request.fields['language'] = 'ca';
     request.fields['id_entrevista'] = interviewId;
-    request.files.add(await http.MultipartFile.fromPath(
+    request.files.add(http.MultipartFile.fromBytes(
       'video',
-      videoPath,
+      videoBytes,
+      filename: fileName,
       contentType: MediaType('video', 'mp4'),
     ));
     final streamed = await request.send();

@@ -180,10 +180,12 @@ class _InterviewScreenState extends State<InterviewScreen>
     setState(() { _recording = false; _uploading = true; });
     try {
       final file = await camera.stopVideoRecording();
+      final bytes = await file.readAsBytes();
       final interviewId = await ApiService.submitInterview(
         questionId: question.id,
         questionText: question.text,
-        videoPath: file.path,
+        videoBytes: bytes,
+        fileName: file.name,
       );
       if (mounted) context.go('/report-sent/$interviewId');
     } catch (e) {
