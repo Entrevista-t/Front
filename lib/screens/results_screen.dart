@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/interview_models.dart';
@@ -18,7 +17,7 @@ class ResultsScreen extends StatefulWidget {
 }
 
 /// Total number of staggered sections for entrance animation.
-const _sectionCount = 7;
+const _sectionCount = 6;
 
 class _ResultsScreenState extends State<ResultsScreen>
     with TickerProviderStateMixin {
@@ -187,18 +186,16 @@ class _ResultsScreenState extends State<ResultsScreen>
         padding: const EdgeInsets.all(kPagePadding),
         children: [
           _entrance(0, _buildCategoryHeader(r)),
-          const SizedBox(height: kS16),
-          _entrance(1, _buildPerformanceSection(r)),
-          const SizedBox(height: kS16),
-          _entrance(2, _buildStrengthsWeaknessesChart(r)),
-          const SizedBox(height: kS16),
-          _entrance(3, _buildTranscript(r)),
-          const SizedBox(height: kS16),
-          _entrance(4, _buildDetailCards(r)),
-          const SizedBox(height: kS16),
-          _entrance(5, _buildReportsList(r)),
           const SizedBox(height: kS24),
-          _entrance(6, ElevatedButton(
+          _entrance(1, _buildPerformanceRow(r)),
+          const SizedBox(height: kS16),
+          _entrance(2, _buildTranscript(r)),
+          const SizedBox(height: kS16),
+          _entrance(3, _buildDetailCards(r)),
+          const SizedBox(height: kS16),
+          _entrance(4, _buildReportsList(r)),
+          const SizedBox(height: kS24),
+          _entrance(5, ElevatedButton(
             onPressed: () => context.go('/home'),
             child: const Text('Nova simulació'),
           )),
@@ -209,30 +206,159 @@ class _ResultsScreenState extends State<ResultsScreen>
   }
 
   Widget _buildCategoryHeader(InterviewResult r) {
-    return Row(
-      children: [
-        AppChip('Puntuacio global: ${r.overallScore.toStringAsFixed(0)}%'),
-      ],
+    final color = scoreColor(r.overallScore);
+    final curved = CurvedAnimation(parent: _scoreCtrl, curve: Curves.easeOutCubic);
+    final tween = Tween<double>(begin: 0, end: r.overallScore / 100);
+
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, child) {
+        final animValue = tween.evaluate(curved);
+        return Center(
+          child: Column(
+            children: [
+              SizedBox(
+                width: 160, height: 160,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 160, height: 160,
+                      child: CircularProgressIndicator(
+                        value: animValue,
+                        strokeWidth: 12,
+                        backgroundColor: context.colors.borderSubtle,
+                        valueColor: AlwaysStoppedAnimation(color),
+                        strokeCap: StrokeCap.round,
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${(animValue * 100).toInt()}%',
+                          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                            fontWeight: FontWeight.bold, color: color,
+                          ),
+                        ),
+                        Text(
+                          'Puntuació global',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: context.colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildPerformanceSection(InterviewResult r) {
+  Widget _buildPerformanceRow(InterviewResult r) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 600;
+        final rendiment = _buildRendimentCard(r);
+        final punts = _buildStrengthsBars(r);
+        if (wide) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: rendiment),
+              const SizedBox(width: kS16),
+              Expanded(child: punts),
+            ],
+          );
+        }
+        return Column(children: [
+          rendiment,
+          const SizedBox(height: kS16),
+          punts,
+        ]);
+      },
+    );
+  }
+
+  Widget _buildRendimentCard(InterviewResult r) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(title: 'Rendiment'),
           const SizedBox(height: kS24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _circleScore('Contingut', r.contentScore),
-              _circleScore('Fluïdesa', r.fluencyScore),
-              _circleScore('Seguretat', r.confidenceScore),
-            ],
-          ),
+          _circleScore('Contingut', r.contentScore),
+          const SizedBox(height: kS16),
+          _circleScore('Fluïdesa', r.fluencyScore),
+          const SizedBox(height: kS16),
+          _circleScore('Seguretat', r.confidenceScore),
         ],
       ),
+    );
+  }
+
+  Widget _buildStrengthsBars(InterviewResult r) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppSectionHeader(title: 'Punts forts i febles'),
+          const SizedBox(height: kS20),
+          _horizontalBar('Contingut', r.contentScore),
+          const SizedBox(height: kS16),
+          _horizontalBar('Fluïdesa', r.fluencyScore),
+          const SizedBox(height: kS16),
+          _horizontalBar('Lèxic', r.lexicalScore),
+          const SizedBox(height: kS16),
+          _horizontalBar('Estructura', r.structureScore),
+          const SizedBox(height: kS16),
+          _horizontalBar('Seguretat', r.confidenceScore),
+        ],
+      ),
+    );
+  }
+
+  Widget _horizontalBar(String label, double value) {
+    final color = scoreColor(value);
+    final curved = CurvedAnimation(parent: _scoreCtrl, curve: Curves.easeOutCubic);
+    final tween = Tween<double>(begin: 0, end: (value / 100).clamp(0.0, 1.0));
+
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, child) {
+        final animValue = tween.evaluate(curved);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(label, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  '${(animValue * 100).toInt()}%',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600, color: color,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: kS4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(kRadiusSm),
+              child: LinearProgressIndicator(
+                value: animValue,
+                minHeight: 10,
+                backgroundColor: context.colors.borderSubtle,
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -278,74 +404,6 @@ class _ResultsScreenState extends State<ResultsScreen>
         );
       },
     );
-  }
-
-  Widget _buildStrengthsWeaknessesChart(InterviewResult r) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppSectionHeader(title: 'Punts forts i febles'),
-          const SizedBox(height: kS24),
-          SizedBox(
-            height: 160,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: 100,
-                barTouchData: BarTouchData(enabled: false),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      getTitlesWidget: (value, _) {
-                        const labels = ['Contingut', 'Fluïdesa', 'Lèxic', 'Estructura', 'Seguretat'];
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            labels[value.toInt()],
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                gridData: const FlGridData(show: false),
-                barGroups: [
-                  _bar(0, r.contentScore),
-                  _bar(1, r.fluencyScore),
-                  _bar(2, r.lexicalScore),
-                  _bar(3, r.structureScore),
-                  _bar(4, r.confidenceScore),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  BarChartGroupData _bar(int x, double value) {
-    return BarChartGroupData(x: x, barRods: [
-      BarChartRodData(
-        toY: value,
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [kAccent.withValues(alpha: 0.6), kAccent],
-        ),
-        width: 22,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(kRadiusSm)),
-      ),
-    ]);
   }
 
   Widget _buildTranscript(InterviewResult r) {
