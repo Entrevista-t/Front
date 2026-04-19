@@ -95,11 +95,6 @@ class _ReportSentScreenState extends State<ReportSentScreen>
                   icon: const Icon(Icons.home_rounded, size: 20),
                   label: const Text("Tornar a l'inici"),
                 ),
-                const SizedBox(height: kS24),
-                TextButton(
-                  onPressed: () => context.go('/results/${widget.sessionId}'),
-                  child: const Text('Veure resultats complets'),
-                ),
               ],
             ),
           ),
