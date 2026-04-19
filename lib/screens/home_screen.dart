@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../main.dart' show EntrevistatApp;
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
@@ -170,7 +171,18 @@ class _HomeScreenState extends State<HomeScreen>
       backgroundColor: context.colors.bgBase,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: const SizedBox(width: 48),
+        leading: LayoutBuilder(
+          builder: (context, constraints) {
+            final isMobile = MediaQuery.of(context).size.width < 600;
+            if (isMobile) {
+              return Padding(
+                padding: const EdgeInsets.only(left: kS12),
+                child: _ThemeToggleButton(),
+              );
+            }
+            return const SizedBox(width: 48);
+          },
+        ),
         title: Center(
           child: GestureDetector(
             onTap: () => context.go('/landing'),
@@ -679,6 +691,30 @@ class _GridArrow extends StatelessWidget {
               color: context.colors.textSecondary,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── AppBar theme toggle button (mobile only) ───────────────────────────────
+class _ThemeToggleButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return GestureDetector(
+      onTap: () => EntrevistatApp.themeNotifier.toggle(),
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: kAccent.withValues(alpha: 0.08),
+        ),
+        child: Icon(
+          isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+          size: 16,
+          color: context.colors.textSecondary,
         ),
       ),
     );

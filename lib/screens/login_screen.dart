@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../main.dart' show kDevBypassLogin;
@@ -112,8 +113,33 @@ class _LoginScreenState extends State<LoginScreen>
       body: DotGridBackground(
         showGlows: true,
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
+          child: Stack(
+            children: [
+              // ── Back button ────────────────────────────────
+              Positioned(
+                top: kS12,
+                left: kS12,
+                child: GestureDetector(
+                  onTap: () => context.go('/landing'),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: context.colors.bgSurface.withValues(alpha: 0.6),
+                      border: Border.all(color: context.colors.borderSubtle),
+                    ),
+                    child: Icon(
+                      Icons.arrow_back_rounded,
+                      size: 20,
+                      color: context.colors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+              // ── Form content ───────────────────────────────
+              Center(
+                child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                   horizontal: kPagePadding, vertical: kS32),
               child: SlideTransition(
@@ -134,7 +160,9 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
             ),
-          ),
+            ),
+          ],
+        ),
         ),
       ),
     );
@@ -489,12 +517,16 @@ class _LoginScreenState extends State<LoginScreen>
                     text: "Termes d'ús",
                     style: const TextStyle(
                         color: kAccent, fontWeight: FontWeight.w600),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => context.go('/faq'),
                   ),
                   const TextSpan(text: ' i la '),
                   TextSpan(
                     text: 'Política de privacitat',
                     style: const TextStyle(
                         color: kAccent, fontWeight: FontWeight.w600),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => context.go('/privacy'),
                   ),
                   const TextSpan(text: '.'),
                 ],
