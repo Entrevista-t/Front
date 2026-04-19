@@ -255,12 +255,15 @@ class _ResultsScreenState extends State<ResultsScreen>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  CircularProgressIndicator(
-                    value: animValue,
-                    strokeWidth: 9,
-                    backgroundColor: context.colors.borderSubtle,
-                    valueColor: AlwaysStoppedAnimation(color),
-                    strokeCap: StrokeCap.round,
+                  SizedBox(
+                    width: 130, height: 130,
+                    child: CircularProgressIndicator(
+                      value: animValue,
+                      strokeWidth: 10,
+                      backgroundColor: context.colors.borderSubtle,
+                      valueColor: AlwaysStoppedAnimation(color),
+                      strokeCap: StrokeCap.round,
+                    ),
                   ),
                   Text(
                     '${(animValue * 100).toInt()}%',
