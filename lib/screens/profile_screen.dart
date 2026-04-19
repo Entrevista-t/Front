@@ -154,31 +154,48 @@ class _ProfileScreenState extends State<ProfileScreen>
           color: context.colors.bgElevated,
           borderRadius: BorderRadius.circular(kRadiusMd),
         ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 36,
-              backgroundColor: kAccent.withValues(alpha: 0.08),
-              child: const Icon(Icons.person, color: kAccent, size: 38),
-            ),
-            const SizedBox(width: kS16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_name, style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: kS4),
-                  Text(_email, style: Theme.of(context).textTheme.bodySmall),
-                  const SizedBox(height: kS12),
-                  const AppChip('Pla gratuït'),
-                ],
-              ),
-            ),
-            const SizedBox(width: kS12),
-            _statBadge('${_sessions.length}', 'Sessions', Icons.videocam_outlined),
-            const SizedBox(width: kS12),
-            _statBadge('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final badgeWidth = (constraints.maxWidth * 0.5 - kS16 - kS12) / 2;
+            return Row(
+              children: [
+                CircleAvatar(
+                  radius: 36,
+                  backgroundColor: kAccent.withValues(alpha: 0.08),
+                  child: const Icon(Icons.person, color: kAccent, size: 38),
+                ),
+                const SizedBox(width: kS16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_name, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: kS4),
+                      Text(_email, style: Theme.of(context).textTheme.bodySmall),
+                      const SizedBox(height: kS12),
+                      const AppChip('Pla gratuït'),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: kS12),
+                IntrinsicHeight(
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: badgeWidth,
+                        child: _statBadge('${_sessions.length}', 'Sessions', Icons.videocam_outlined),
+                      ),
+                      const SizedBox(width: kS12),
+                      SizedBox(
+                        width: badgeWidth,
+                        child: _statBadge('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -205,7 +222,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             border: Border.all(color: context.colors.borderSubtle),
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, color: kAccent, size: 20),
               const SizedBox(height: kS6),

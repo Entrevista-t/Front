@@ -266,13 +266,15 @@ class _ResultsScreenState extends State<ResultsScreen>
         final rendiment = _buildRendimentCard(r);
         final punts = _buildStrengthsBars(r);
         if (wide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: rendiment),
-              const SizedBox(width: kS16),
-              Expanded(child: punts),
-            ],
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: rendiment),
+                const SizedBox(width: kS16),
+                Expanded(child: punts),
+              ],
+            ),
           );
         }
         return Column(children: [
