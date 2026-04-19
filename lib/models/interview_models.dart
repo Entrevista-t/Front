@@ -225,22 +225,14 @@ class InterviewResult {
 
   static double? _computeOverallFromMetriques(Map<String, dynamic> metriques) {
     try {
-      final audio = metriques['audio_metrics'] as Map<String, dynamic>?;
-      final text = metriques['text_metrics'] as Map<String, dynamic>?;
-      if (audio == null && text == null) return null;
-      // confidence_index may be a nested object with 'score'
-      final confRaw = audio?['confidence_index'];
-      final confidence = confRaw is Map
-          ? (confRaw['score'] as num?)?.toDouble() ?? 0.0
-          : (confRaw as num?)?.toDouble() ?? 0.0;
-      // discourse_coherence may be a nested object with 'global_coherence'
-      final cohRaw = text?['discourse_coherence'];
-      final coherence = cohRaw is Map
-          ? (cohRaw['global_coherence'] as num?)?.toDouble() ?? 0.0
-          : (cohRaw as num?)?.toDouble() ?? 0.0;
-      final alignment = (text?['question_alignment'] as num?)?.toDouble() ?? 0;
-      final density = (text?['information_density'] as num?)?.toDouble() ?? 0;
-      return ((confidence + coherence + alignment + density) / 4) * 100;
+      // Reuse the same InterviewResult parsing and score formula
+      final result = InterviewResult.fromJson({
+        'id_entrevista': 0,
+        'estat_proces': 'completat',
+        'metriques': metriques,
+      });
+      final score = result.overallScore;
+      return score > 0 ? score : null;
     } catch (_) { return null; }
   }
 

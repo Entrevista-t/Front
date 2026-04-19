@@ -291,11 +291,14 @@ class _ResultsScreenState extends State<ResultsScreen>
         children: [
           AppSectionHeader(title: 'Rendiment'),
           const SizedBox(height: kS24),
-          _circleScore('Contingut', r.contentScore),
-          const SizedBox(height: kS16),
-          _circleScore('Fluïdesa', r.fluencyScore),
-          const SizedBox(height: kS16),
-          _circleScore('Seguretat', r.confidenceScore),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _circleScore('Contingut', r.contentScore),
+              _circleScore('Fluïdesa', r.fluencyScore),
+              _circleScore('Seguretat', r.confidenceScore),
+            ],
+          ),
         ],
       ),
     );
@@ -444,13 +447,13 @@ class _ResultsScreenState extends State<ResultsScreen>
   Widget _buildDetailCards(InterviewResult r) {
     return Row(
       children: [
-        Expanded(child: _miniCard(r.wordsPerMinute.toStringAsFixed(0), 'ppm', Icons.speed_rounded)),
+        Expanded(child: _miniCard(r.wordsPerMinute.toStringAsFixed(0), 'Paraules per minut', Icons.speed_rounded)),
         const SizedBox(width: kS8),
-        Expanded(child: _miniCard('${r.speechRatio.toStringAsFixed(0)}%', 'temps de parla', Icons.mic_rounded)),
+        Expanded(child: _miniCard('${r.speechRatio.toStringAsFixed(0)}%', 'Temps de parla', Icons.mic_rounded)),
         const SizedBox(width: kS8),
-        Expanded(child: _miniCard(_emotionLabel(r.dominantEmotion), 'emoció', Icons.face_rounded)),
+        Expanded(child: _miniCard(_emotionLabel(r.dominantEmotion), 'Emoció predominant', Icons.face_rounded)),
         const SizedBox(width: kS8),
-        Expanded(child: _miniCard('${r.lexicalScore.toStringAsFixed(0)}%', 'riquesa lexica', Icons.auto_stories_rounded)),
+        Expanded(child: _miniCard('${r.lexicalScore.toStringAsFixed(0)}%', 'Riquesa lèxica', Icons.auto_stories_rounded)),
       ],
     );
   }
