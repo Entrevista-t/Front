@@ -224,8 +224,16 @@ class InterviewResult {
       final audio = metriques['audio_metrics'] as Map<String, dynamic>?;
       final text = metriques['text_metrics'] as Map<String, dynamic>?;
       if (audio == null && text == null) return null;
-      final confidence = (audio?['confidence_index'] as num?)?.toDouble() ?? 0;
-      final coherence = (text?['discourse_coherence'] as num?)?.toDouble() ?? 0;
+      // confidence_index may be a nested object with 'score'
+      final confRaw = audio?['confidence_index'];
+      final confidence = confRaw is Map
+          ? (confRaw['score'] as num?)?.toDouble() ?? 0.0
+          : (confRaw as num?)?.toDouble() ?? 0.0;
+      // discourse_coherence may be a nested object with 'global_coherence'
+      final cohRaw = text?['discourse_coherence'];
+      final coherence = cohRaw is Map
+          ? (cohRaw['global_coherence'] as num?)?.toDouble() ?? 0.0
+          : (cohRaw as num?)?.toDouble() ?? 0.0;
       final alignment = (text?['question_alignment'] as num?)?.toDouble() ?? 0;
       final density = (text?['information_density'] as num?)?.toDouble() ?? 0;
       return ((confidence + coherence + alignment + density) / 4) * 100;
@@ -244,22 +252,34 @@ class InterviewResult {
           .map((k, v) => MapEntry(k, (v as num).toDouble()));
     }
 
+    // confidence_index is a nested object with a 'score' field
+    final confidenceRaw = audio['confidence_index'];
+    final confidenceVal = confidenceRaw is Map
+        ? (confidenceRaw['score'] as num?)?.toDouble()
+        : (confidenceRaw as num?)?.toDouble();
+
+    // discourse_coherence is a nested object with a 'global_coherence' field
+    final coherenceRaw = text['discourse_coherence'];
+    final coherenceVal = coherenceRaw is Map
+        ? (coherenceRaw['global_coherence'] as num?)?.toDouble()
+        : (coherenceRaw as num?)?.toDouble();
+
     return InterviewResult(
       interviewId: json['id_entrevista'] as int? ?? 0,
       status: json['estat_proces'] as String? ?? 'pendent',
       transcript: metriques['transcript'] as String?,
       durationTotal: (audio['duration_total'] as num?)?.toDouble(),
       activeSpeechTime: (audio['active_speech_time'] as num?)?.toDouble(),
-      confidenceIndex: (audio['confidence_index'] as num?)?.toDouble(),
+      confidenceIndex: confidenceVal,
       communicationRhythmWpm: (audio['communication_rhythm_wpm'] as num?)?.toDouble(),
       questionAlignment: (text['question_alignment'] as num?)?.toDouble(),
-      discourseCoherence: (text['discourse_coherence'] as num?)?.toDouble(),
+      discourseCoherence: coherenceVal,
       informationDensity: (text['information_density'] as num?)?.toDouble(),
       specificityIndex: (text['specificity_index'] as num?)?.toDouble(),
       lexicalRichness: (text['lexical_richness'] as num?)?.toDouble(),
       emotionDistribution: emotionDist,
       dominantEmotion: video['dominant_emotion'] as String?,
-      emotionalConsistency: (video['emotional_consistency'] as num?)?.toDouble(),
+      emotionalConsistency: (video['emotional_stability'] as num?)?.toDouble(),
     );
   }
 

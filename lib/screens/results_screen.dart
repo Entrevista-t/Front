@@ -135,16 +135,16 @@ class _ResultsScreenState extends State<ResultsScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.hourglass_top_rounded, size: 64, color: kAccent.withValues(alpha: 0.6)),
+                Icon(Icons.error_outline_rounded, size: 64, color: context.colors.textTertiary),
                 const SizedBox(height: kS24),
                 Text(
-                  "L'anàlisi encara s'està processant",
+                  'No s\'han pogut carregar els resultats',
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: kS12),
                 Text(
-                  _error ?? "Els resultats estaran disponibles en uns minuts.\nRebràs una notificació quan estiguin llestos.",
+                  _error ?? 'Error desconegut',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: context.colors.textSecondary, height: 1.6,
                   ),
@@ -152,17 +152,18 @@ class _ResultsScreenState extends State<ResultsScreen>
                 ),
                 const SizedBox(height: kS32),
                 ElevatedButton.icon(
-                  onPressed: () => context.go('/home'),
-                  icon: const Icon(Icons.home_rounded, size: 20),
-                  label: const Text("Tornar a l'inici"),
-                ),
-                const SizedBox(height: kS12),
-                TextButton(
                   onPressed: () {
                     setState(() { _loading = true; _error = null; });
                     _load();
                   },
-                  child: const Text('Tornar a intentar'),
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  label: const Text('Tornar a intentar'),
+                ),
+                const SizedBox(height: kS12),
+                TextButton.icon(
+                  onPressed: () => context.go('/home'),
+                  icon: const Icon(Icons.home_rounded, size: 20),
+                  label: const Text("Tornar a l'inici"),
                 ),
               ],
             ),
