@@ -6,11 +6,13 @@ import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart' show kFontSans;
-import '../widgets/app_section_header.dart';
+// TODO: Uncomment when recent sessions section is re-enabled
+// import '../widgets/app_section_header.dart';
 import '../widgets/dot_grid_background.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/glow_icon.dart';
-import '../widgets/session_tile.dart';
+// TODO: Uncomment when recent sessions section is re-enabled
+// import '../widgets/session_tile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -296,31 +298,32 @@ class _HomeScreenState extends State<HomeScreen>
                     const SizedBox(height: kS24),
                   ],
 
+                  // TODO: Uncomment when ready to show recent sessions
                   // ── Recent sessions ─────────────────────────────────
-                  if (_recentSessions.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                      child: AppSectionHeader(
-                        title: 'Sessions recents',
-                        trailing: Text(
-                          'Veure totes',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: kAccent, fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: kS12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                      child: Column(
-                        children: _recentSessions.map((s) => SessionTile(
-                          session: s,
-                          onTap: () => context.go('/results/${s.id}'),
-                        )).toList(),
-                      ),
-                    ),
-                  ],
+                  // if (_recentSessions.isNotEmpty) ...[
+                  //   Padding(
+                  //     padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                  //     child: AppSectionHeader(
+                  //       title: 'Sessions recents',
+                  //       trailing: Text(
+                  //         'Veure totes',
+                  //         style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  //           color: kAccent, fontWeight: FontWeight.w600,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
+                  //   const SizedBox(height: kS12),
+                  //   Padding(
+                  //     padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                  //     child: Column(
+                  //       children: _recentSessions.map((s) => SessionTile(
+                  //         session: s,
+                  //         onTap: () => context.go('/results/${s.id}'),
+                  //       )).toList(),
+                  //     ),
+                  //   ),
+                  // ],
                   const SizedBox(height: kS24),
                 ],
               ),

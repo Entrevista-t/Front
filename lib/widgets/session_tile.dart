@@ -57,8 +57,10 @@ class SessionTile extends StatelessWidget {
             color: _statusColor(context),
           ),
         ),
-        trailing: Icon(Icons.chevron_right, color: context.colors.textSecondary, size: 20),
-        onTap: onTap,
+        trailing: session.isCompleted
+            ? Icon(Icons.chevron_right, color: context.colors.textSecondary, size: 20)
+            : null,
+        onTap: session.isCompleted ? onTap : null,
       ),
     );
   }
