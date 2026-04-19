@@ -181,11 +181,16 @@ class _InterviewScreenState extends State<InterviewScreen>
     try {
       final file = await camera.stopVideoRecording();
       final bytes = await file.readAsBytes();
+      // Web cameras typically record WebM; ensure filename has a valid extension
+      var name = file.name;
+      if (!RegExp(r'\.(mp4|webm|avi|mov|mkv|m4v|wmv)$', caseSensitive: false).hasMatch(name)) {
+        name = 'recording.webm';
+      }
       final interviewId = await ApiService.submitInterview(
         questionId: question.id,
         questionText: question.text,
         videoBytes: bytes,
-        fileName: file.name,
+        fileName: name,
       );
       if (mounted) context.go('/report-sent/$interviewId');
     } catch (e) {

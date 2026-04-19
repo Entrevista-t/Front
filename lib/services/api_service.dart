@@ -304,11 +304,14 @@ class ApiService {
     request.fields['question'] = questionText;
     request.fields['language'] = 'ca';
     request.fields['id_entrevista'] = interviewId;
+    // Derive MIME subtype from filename extension
+    final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : 'webm';
+    final mimeSubtype = (ext == 'webm') ? 'webm' : (ext == 'avi') ? 'x-msvideo' : ext;
     request.files.add(http.MultipartFile.fromBytes(
       'video',
       videoBytes,
       filename: fileName,
-      contentType: MediaType('video', 'mp4'),
+      contentType: MediaType('video', mimeSubtype),
     ));
     final streamed = await request.send();
     final analyzeRes = await http.Response.fromStream(streamed);
