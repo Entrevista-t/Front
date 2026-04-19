@@ -251,7 +251,7 @@ class _ResultsScreenState extends State<ResultsScreen>
         return Column(
           children: [
             SizedBox(
-              width: 82, height: 82,
+              width: 100, height: 100,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -264,7 +264,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                   ),
                   Text(
                     '${(animValue * 100).toInt()}%',
-                    style: Theme.of(context).textTheme.titleSmall,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],
               ),
@@ -299,9 +299,9 @@ class _ResultsScreenState extends State<ResultsScreen>
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: 40,
                       getTitlesWidget: (value, _) {
-                        const labels = ['Cont.', 'Fluï.', 'Lèxic', 'Estr.', 'Conf.'];
+                        const labels = ['Contingut', 'Fluïdesa', 'Lèxic', 'Estructura', 'Seguretat'];
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
@@ -365,7 +365,7 @@ class _ResultsScreenState extends State<ResultsScreen>
             Row(children: [
               const Icon(Icons.text_snippet_rounded, color: kAccent, size: 18),
               const SizedBox(width: kS8),
-              AppSectionHeader(title: 'Transcripcio'),
+              AppSectionHeader(title: 'Transcripció'),
             ]),
             const SizedBox(height: kS12),
             Text(
@@ -442,17 +442,22 @@ class _ResultsScreenState extends State<ResultsScreen>
           AppSectionHeader(title: 'Detall de metriques'),
           const SizedBox(height: kS12),
           const Divider(),
-          _reportItem('Alineacio amb la pregunta', (r.questionAlignment ?? 0).toStringAsFixed(2), kAccent, Icons.track_changes_rounded),
-          _reportItem('Coherencia del discurs', (r.discourseCoherence ?? 0).toStringAsFixed(2), kAccent, Icons.linear_scale_rounded),
-          _reportItem('Densitat informativa', (r.informationDensity ?? 0).toStringAsFixed(2), kAccent, Icons.density_medium_rounded),
-          _reportItem("Index d'especificitat", (r.specificityIndex ?? 0).toStringAsFixed(2), kAccent, Icons.precision_manufacturing_rounded),
-          _reportItem('Consistencia emocional', (r.emotionalConsistency ?? 0).toStringAsFixed(2), kAccent, Icons.psychology_rounded),
+          _reportItem('Alineació amb la pregunta', (r.questionAlignment ?? 0).toStringAsFixed(2), kAccent, Icons.track_changes_rounded,
+            description: "Mesura com de relacionada està la resposta amb la pregunta formulada."),
+          _reportItem('Coherència del discurs', (r.discourseCoherence ?? 0).toStringAsFixed(2), kAccent, Icons.linear_scale_rounded,
+            description: "Avalua la connexió lògica i el fil conductor entre les idees exposades."),
+          _reportItem('Densitat informativa', (r.informationDensity ?? 0).toStringAsFixed(2), kAccent, Icons.density_medium_rounded,
+            description: "Proporció de paraules amb contingut rellevant respecte al total."),
+          _reportItem("Índex d'especificitat", (r.specificityIndex ?? 0).toStringAsFixed(2), kAccent, Icons.precision_manufacturing_rounded,
+            description: "Grau de concreció i detall en la resposta, evitant generalitats."),
+          _reportItem('Estabilitat emocional', (r.emotionalConsistency ?? 0).toStringAsFixed(2), kAccent, Icons.psychology_rounded,
+            description: "Consistència de les expressions facials durant la resposta."),
         ],
       ),
     );
   }
 
-  Widget _reportItem(String label, String value, Color color, IconData icon) {
+  Widget _reportItem(String label, String value, Color color, IconData icon, {String? description}) {
     return Column(
       children: [
         const SizedBox(height: kS12),
@@ -468,8 +473,23 @@ class _ResultsScreenState extends State<ResultsScreen>
             ),
             const SizedBox(width: kS12),
             Expanded(
-              child: Text(label, style: Theme.of(context).textTheme.titleSmall),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: Theme.of(context).textTheme.titleSmall),
+                  if (description != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.colors.textTertiary, height: 1.3,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
+            const SizedBox(width: kS8),
             Text(
               value,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(

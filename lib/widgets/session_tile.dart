@@ -48,14 +48,22 @@ class SessionTile extends StatelessWidget {
             ? ScoreBadge(score: score)
             : Icon(_statusIcon, color: _statusColor(context), size: 28),
         title: Text(
-          'Entrevista ${session.formattedDate}',
+          session.categoryName != null
+              ? '${session.categoryName} · ${session.formattedDate}'
+              : 'Entrevista ${session.formattedDate}',
           style: Theme.of(context).textTheme.titleSmall,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          session.statusLabel,
+          session.questionText ?? session.statusLabel,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: _statusColor(context),
+            color: session.questionText != null
+                ? context.colors.textSecondary
+                : _statusColor(context),
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         trailing: session.isCompleted
             ? Icon(Icons.chevron_right, color: context.colors.textSecondary, size: 20)

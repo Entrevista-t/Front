@@ -248,19 +248,46 @@ class ApiService {
 
   static Future<List<InterviewSession>> getRecentSessions() async {
     await _loadToken();
-    final res = await http.get(
-      Uri.parse('$_baseUrl/entrevistas/me'),
-      headers: _jsonAuthHeaders,
-    );
-    if (res.statusCode == 200) {
-      final list = (jsonDecode(res.body) as List)
-          .map((e) => InterviewSession.fromJson(e))
-          .toList();
-      list.sort((a, b) => b.date.compareTo(a.date));
-      return list;
+    // Fetch sessions, questions and categories in parallel
+    final results = await Future.wait([
+      http.get(Uri.parse('$_baseUrl/entrevistas/me'), headers: _jsonAuthHeaders),
+      http.get(Uri.parse('$_baseUrl/preguntas'), headers: _jsonAuthHeaders),
+      http.get(Uri.parse('$_baseUrl/categorias'), headers: _jsonAuthHeaders),
+    ]);
+    final sessionsRes = results[0];
+    if (sessionsRes.statusCode != 200) {
+      await _guard(sessionsRes);
+      throw Exception('Error carregant sessions');
     }
-    await _guard(res);
-    throw Exception('Error carregant sessions');
+    final list = (jsonDecode(sessionsRes.body) as List)
+        .map((e) => InterviewSession.fromJson(e))
+        .toList();
+
+    // Build lookup maps for question text and category name
+    Map<int, String> questionTexts = {};
+    Map<int, int> questionCategories = {};
+    Map<int, String> categoryNames = {};
+    if (results[1].statusCode == 200) {
+      for (final q in jsonDecode(results[1].body) as List) {
+        questionTexts[q['id'] as int] = q['text_pregunta'] as String;
+        questionCategories[q['id'] as int] = q['id_categoria'] as int;
+      }
+    }
+    if (results[2].statusCode == 200) {
+      for (final c in jsonDecode(results[2].body) as List) {
+        categoryNames[c['id'] as int] = c['nom'] as String;
+      }
+    }
+    // Enrich sessions
+    for (final s in list) {
+      if (s.questionId != null) {
+        s.questionText = questionTexts[s.questionId];
+        final catId = questionCategories[s.questionId];
+        if (catId != null) s.categoryName = categoryNames[catId];
+      }
+    }
+    list.sort((a, b) => b.date.compareTo(a.date));
+    return list;
   }
 
   static Future<InterviewSession> getInterviewById(String interviewId) async {

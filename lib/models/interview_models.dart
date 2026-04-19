@@ -98,6 +98,8 @@ class InterviewSession {
   final String? videoUrl;
   final String? pdfUrl;
   final Map<String, dynamic>? metriques;
+  String? categoryName;
+  String? questionText;
 
   InterviewSession({
     required this.id,
@@ -107,6 +109,8 @@ class InterviewSession {
     this.videoUrl,
     this.pdfUrl,
     this.metriques,
+    this.categoryName,
+    this.questionText,
   });
 
   factory InterviewSession.fromJson(Map<String, dynamic> json) =>
