@@ -5,7 +5,6 @@ import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import '../widgets/app_card.dart';
 import '../widgets/app_section_header.dart';
 import '../widgets/app_empty_state.dart';
 import '../widgets/session_tile.dart';
@@ -176,56 +175,51 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ),
             const SizedBox(width: kS12),
-            _statCard('${_sessions.length}', 'Sessions', Icons.videocam_outlined, isNumeric: true),
+            _statBadge('${_sessions.length}', 'Sessions', Icons.videocam_outlined),
             const SizedBox(width: kS12),
-            _statCard('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded, isNumeric: true),
+            _statBadge('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded),
           ],
         ),
       ),
     );
   }
 
-  Widget _statCard(String value, String label, IconData icon, {bool isNumeric = false}) {
-    return AppCard(
-      padding: const EdgeInsets.symmetric(vertical: kS16, horizontal: kS12),
-      child: Column(
-        children: [
-          Icon(icon, color: kAccent, size: 20),
-          const SizedBox(height: kS8),
-          isNumeric
-              ? AnimatedBuilder(
-                  animation: _statsCtrl,
-                  builder: (_, __) {
-                    final numericPart = RegExp(r'\d+').firstMatch(value);
-                    if (numericPart == null) {
-                      return Text(value,
-                          style: Theme.of(context).textTheme.titleSmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center);
-                    }
-                    final target = int.parse(numericPart.group(0)!);
-                    final curvedProgress = kCurveEntrance.transform(_statsCtrl.value);
-                    final current = (target * curvedProgress).round();
-                    final display = value.replaceFirst(numericPart.group(0)!, '$current');
-                    return Text(display,
-                        style: Theme.of(context).textTheme.titleSmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center);
-                  },
-                )
-              : Text(value,
+  Widget _statBadge(String value, String label, IconData icon) {
+    final curved = CurvedAnimation(parent: _statsCtrl, curve: kCurveEntrance);
+    final numericPart = RegExp(r'\d+').firstMatch(value);
+
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, _) {
+        String display = value;
+        if (numericPart != null) {
+          final target = int.parse(numericPart.group(0)!);
+          final current = (target * curved.value).round();
+          display = value.replaceFirst(numericPart.group(0)!, '$current');
+        }
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: kS12, horizontal: kS12),
+          decoration: BoxDecoration(
+            color: context.colors.bgSurface,
+            borderRadius: BorderRadius.circular(kRadiusMd),
+            border: Border.all(color: context.colors.borderSubtle),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: kAccent, size: 20),
+              const SizedBox(height: kS6),
+              Text(display,
                   style: Theme.of(context).textTheme.titleSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center),
-          const SizedBox(height: kS4),
-          Text(label,
-              style: Theme.of(context).textTheme.labelSmall,
-              textAlign: TextAlign.center),
-        ],
-      ),
+              const SizedBox(height: kS4),
+              Text(label,
+                  style: Theme.of(context).textTheme.labelSmall,
+                  textAlign: TextAlign.center),
+            ],
+          ),
+        );
+      },
     );
   }
 }
