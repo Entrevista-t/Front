@@ -163,8 +163,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final badgeWidth = (constraints.maxWidth * 0.5 - kS16 - kS12) / 2;
-            return Row(
+            final isMobile = constraints.maxWidth < 500;
+            final userInfo = Row(
               children: [
                 CircleAvatar(
                   radius: 36,
@@ -189,19 +189,44 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ],
                   ),
                 ),
+              ],
+            );
+
+            final statBadges = IntrinsicHeight(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _statBadge('${_sessions.length}', 'Sessions', Icons.videocam_outlined),
+                  ),
+                  const SizedBox(width: kS12),
+                  Expanded(
+                    child: _statBadge('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded),
+                  ),
+                ],
+              ),
+            );
+
+            if (isMobile) {
+              return Column(
+                children: [
+                  userInfo,
+                  const SizedBox(height: kS16),
+                  statBadges,
+                ],
+              );
+            }
+
+            final badgeWidth = (constraints.maxWidth * 0.5 - kS16 - kS12) / 2;
+            return Row(
+              children: [
+                Expanded(child: userInfo),
                 const SizedBox(width: kS12),
                 IntrinsicHeight(
                   child: Row(
                     children: [
-                      SizedBox(
-                        width: badgeWidth,
-                        child: _statBadge('${_sessions.length}', 'Sessions', Icons.videocam_outlined),
-                      ),
+                      SizedBox(width: badgeWidth, child: _statBadge('${_sessions.length}', 'Sessions', Icons.videocam_outlined)),
                       const SizedBox(width: kS12),
-                      SizedBox(
-                        width: badgeWidth,
-                        child: _statBadge('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded),
-                      ),
+                      SizedBox(width: badgeWidth, child: _statBadge('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded)),
                     ],
                   ),
                 ),

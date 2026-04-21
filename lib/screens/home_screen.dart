@@ -895,12 +895,30 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
             child: const CircleAvatar(
               radius: 17,
               backgroundColor: Colors.transparent,
-              child: Icon(Icons.person, color: kAccent, size: 18),
+              child: _ProfileAvatar(),
             ),
           ),
         ),
       ),
     );
+  }
+}
+
+/// Small avatar that shows the user's profile picture if available.
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar();
+
+  @override
+  Widget build(BuildContext context) {
+    final photoUrl = ApiService.userPhotoUrl;
+    if (photoUrl != null) {
+      return CircleAvatar(
+        radius: 17,
+        backgroundImage: NetworkImage('${ApiService.baseUrl}$photoUrl'),
+        backgroundColor: Colors.transparent,
+      );
+    }
+    return const Icon(Icons.person, color: kAccent, size: 18);
   }
 }
 
