@@ -316,8 +316,8 @@ class _ResultsScreenState extends State<ResultsScreen>
     final contentWidth = screenWidth.clamp(0.0, 900.0) - kPagePadding * 2;
     final wide = contentWidth >= 600;
     final cardInnerWidth = wide
-        ? (contentWidth - kS16) / 2 - kS24 * 2
-        : contentWidth - kS24 * 2;
+        ? (contentWidth - kS16) / 2 - kS24 * 2 - 2 // -2 for AppCard border
+        : contentWidth - kS24 * 2 - 2;
     final circleSize = ((cardInnerWidth - kS8 * 6) / 3).clamp(60.0, 130.0);
     final rendiment = _buildRendimentCard(r, circleSize);
     final punts = _buildStrengthsBars(r);
