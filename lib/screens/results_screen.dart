@@ -344,13 +344,19 @@ class _ResultsScreenState extends State<ResultsScreen>
         children: [
           AppSectionHeader(title: 'Rendiment'),
           const SizedBox(height: kS24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _circleScore('Contingut', r.contentScore),
-              _circleScore('Fluïdesa', r.fluencyScore),
-              _circleScore('Seguretat', r.confidenceScore),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Adapt circle size to available width (3 circles + spacing)
+              final circleSize = ((constraints.maxWidth - kS16 * 2) / 3).clamp(60.0, 130.0);
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _circleScore('Contingut', r.contentScore, circleSize),
+                  _circleScore('Fluïdesa', r.fluencyScore, circleSize),
+                  _circleScore('Seguretat', r.confidenceScore, circleSize),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -418,13 +424,15 @@ class _ResultsScreenState extends State<ResultsScreen>
     );
   }
 
-  Widget _circleScore(String label, double value) {
+  Widget _circleScore(String label, double value, double size) {
     final color = scoreColor(value);
     final curved = CurvedAnimation(
       parent: _scoreCtrl,
       curve: Curves.easeOutCubic,
     );
     final tween = Tween<double>(begin: 0, end: value / 100);
+    final strokeWidth = (size * 0.077).clamp(4.0, 10.0);
+    final fontSize = size < 80 ? Theme.of(context).textTheme.titleMedium : Theme.of(context).textTheme.titleLarge;
 
     return AnimatedBuilder(
       animation: curved,
@@ -433,15 +441,15 @@ class _ResultsScreenState extends State<ResultsScreen>
         return Column(
           children: [
             SizedBox(
-              width: 130, height: 130,
+              width: size, height: size,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   SizedBox(
-                    width: 130, height: 130,
+                    width: size, height: size,
                     child: CircularProgressIndicator(
                       value: animValue,
-                      strokeWidth: 10,
+                      strokeWidth: strokeWidth,
                       backgroundColor: context.colors.borderSubtle,
                       valueColor: AlwaysStoppedAnimation(color),
                       strokeCap: StrokeCap.round,
@@ -449,7 +457,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                   ),
                   Text(
                     '${(animValue * 100).toInt()}%',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: fontSize,
                   ),
                 ],
               ),
