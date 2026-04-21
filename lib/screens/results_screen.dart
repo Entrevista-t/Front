@@ -311,36 +311,33 @@ class _ResultsScreenState extends State<ResultsScreen>
   }
 
   Widget _buildPerformanceRow(InterviewResult r) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 600;
-        // Compute circle size from the card's inner width (subtract AppCard padding)
-        final cardInnerWidth = wide
-            ? (constraints.maxWidth - kS16) / 2 - kS24 * 2
-            : constraints.maxWidth - kS24 * 2;
-        // Subtract extra horizontal margin per circle (kS8 each side × 3)
-        final circleSize = ((cardInnerWidth - kS8 * 6) / 3).clamp(60.0, 130.0);
-        final rendiment = _buildRendimentCard(r, circleSize);
-        final punts = _buildStrengthsBars(r);
-        if (wide) {
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: rendiment),
-                const SizedBox(width: kS16),
-                Expanded(child: punts),
-              ],
-            ),
-          );
-        }
-        return Column(children: [
-          rendiment,
-          const SizedBox(height: kS16),
-          punts,
-        ]);
-      },
-    );
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Content width mirrors the ConstrainedBox(maxWidth:900) + ListView padding
+    final contentWidth = screenWidth.clamp(0.0, 900.0) - kPagePadding * 2;
+    final wide = contentWidth >= 600;
+    final cardInnerWidth = wide
+        ? (contentWidth - kS16) / 2 - kS24 * 2
+        : contentWidth - kS24 * 2;
+    final circleSize = ((cardInnerWidth - kS8 * 6) / 3).clamp(60.0, 130.0);
+    final rendiment = _buildRendimentCard(r, circleSize);
+    final punts = _buildStrengthsBars(r);
+    if (wide) {
+      return IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: rendiment),
+            const SizedBox(width: kS16),
+            Expanded(child: punts),
+          ],
+        ),
+      );
+    }
+    return Column(children: [
+      rendiment,
+      const SizedBox(height: kS16),
+      punts,
+    ]);
   }
 
   Widget _buildRendimentCard(InterviewResult r, double circleSize) {
