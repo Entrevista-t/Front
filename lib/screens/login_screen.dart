@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../main.dart' show kDevBypassLogin;
@@ -112,8 +113,33 @@ class _LoginScreenState extends State<LoginScreen>
       body: DotGridBackground(
         showGlows: true,
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
+          child: Stack(
+            children: [
+              // ── Back button ────────────────────────────────
+              Positioned(
+                top: kS12,
+                left: kS12,
+                child: GestureDetector(
+                  onTap: () => context.go('/landing'),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: context.colors.bgSurface.withValues(alpha: 0.6),
+                      border: Border.all(color: context.colors.borderSubtle),
+                    ),
+                    child: Icon(
+                      Icons.arrow_back_rounded,
+                      size: 20,
+                      color: context.colors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+              // ── Form content ───────────────────────────────
+              Center(
+                child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                   horizontal: kPagePadding, vertical: kS32),
               child: SlideTransition(
@@ -134,7 +160,9 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
             ),
-          ),
+            ),
+          ],
+        ),
         ),
       ),
     );
@@ -324,30 +352,32 @@ class _LoginScreenState extends State<LoginScreen>
         ),
 
         // ── "or" divider ───────────────────────────────────
-        const SizedBox(height: kS20),
-        _buildOrDivider(),
-        const SizedBox(height: kS20),
+        // TODO: Uncomment when GitHub/Google OAuth is implemented
+        // const SizedBox(height: kS20),
+        // _buildOrDivider(),
+        // const SizedBox(height: kS20),
 
         // ── Social buttons ─────────────────────────────────
-        Row(
-          children: [
-            Expanded(
-              child: _SocialButton(
-                icon: Icons.code_rounded,
-                label: 'GitHub',
-                onTap: () {},
-              ),
-            ),
-            const SizedBox(width: kS12),
-            Expanded(
-              child: _SocialButton(
-                icon: Icons.g_mobiledata_rounded,
-                label: 'Google',
-                onTap: () {},
-              ),
-            ),
-          ],
-        ),
+        // TODO: Uncomment when GitHub/Google OAuth is implemented
+        // Row(
+        //   children: [
+        //     Expanded(
+        //       child: _SocialButton(
+        //         icon: Icons.code_rounded,
+        //         label: 'GitHub',
+        //         onTap: () {},
+        //       ),
+        //     ),
+        //     const SizedBox(width: kS12),
+        //     Expanded(
+        //       child: _SocialButton(
+        //         icon: Icons.g_mobiledata_rounded,
+        //         label: 'Google',
+        //         onTap: () {},
+        //       ),
+        //     ),
+        //   ],
+        // ),
 
         // ── Toggle footer ──────────────────────────────────
         const SizedBox(height: kS24),
@@ -482,17 +512,13 @@ class _LoginScreenState extends State<LoginScreen>
                   color: context.colors.textTertiary,
                 ),
                 children: [
-                  const TextSpan(text: 'Accepto els '),
-                  TextSpan(
-                    text: "Termes d'ús",
-                    style: const TextStyle(
-                        color: kAccent, fontWeight: FontWeight.w600),
-                  ),
-                  const TextSpan(text: ' i la '),
+                  const TextSpan(text: 'Accepto la '),
                   TextSpan(
                     text: 'Política de privacitat',
                     style: const TextStyle(
                         color: kAccent, fontWeight: FontWeight.w600),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () => context.go('/privacy'),
                   ),
                   const TextSpan(text: '.'),
                 ],
@@ -508,97 +534,99 @@ class _LoginScreenState extends State<LoginScreen>
   // "OR" DIVIDER
   // ══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildOrDivider() {
-    return Row(
-      children: [
-        Expanded(
-          child: Divider(
-              color: context.colors.borderSubtle, thickness: 0.5)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: kS12),
-          child: Text(
-            'o',
-            style: TextStyle(
-              fontFamily: kFontSans,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: context.colors.textDisabled,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Divider(
-              color: context.colors.borderSubtle, thickness: 0.5)),
-      ],
-    );
-  }
+  // TODO: Uncomment when GitHub/Google OAuth is implemented
+  // Widget _buildOrDivider() {
+  //   return Row(
+  //     children: [
+  //       Expanded(
+  //         child: Divider(
+  //             color: context.colors.borderSubtle, thickness: 0.5)),
+  //       Padding(
+  //         padding: const EdgeInsets.symmetric(horizontal: kS12),
+  //         child: Text(
+  //           'o',
+  //           style: TextStyle(
+  //             fontFamily: kFontSans,
+  //             fontSize: 12,
+  //             fontWeight: FontWeight.w500,
+  //             color: context.colors.textDisabled,
+  //             letterSpacing: 1.5,
+  //           ),
+  //         ),
+  //       ),
+  //       Expanded(
+  //         child: Divider(
+  //             color: context.colors.borderSubtle, thickness: 0.5)),
+  //     ],
+  //   );
+  // }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Social login button
+// TODO: Uncomment when GitHub/Google OAuth is implemented
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _SocialButton extends StatefulWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _SocialButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  State<_SocialButton> createState() => _SocialButtonState();
-}
-
-class _SocialButtonState extends State<_SocialButton> {
-  bool _hovering = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: kDurationFast,
-          curve: kCurveHover,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: _hovering
-                ? context.colors.bgSurface
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(kRadiusMd),
-            border: Border.all(
-              color: _hovering
-                  ? context.colors.borderStrong
-                  : context.colors.borderSubtle,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(widget.icon,
-                  size: 20, color: context.colors.textSecondary),
-              const SizedBox(width: 8),
-              Text(
-                widget.label,
-                style: TextStyle(
-                  fontFamily: kFontSans,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: context.colors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+// class _SocialButton extends StatefulWidget {
+//   final IconData icon;
+//   final String label;
+//   final VoidCallback onTap;
+//
+//   const _SocialButton({
+//     required this.icon,
+//     required this.label,
+//     required this.onTap,
+//   });
+//
+//   @override
+//   State<_SocialButton> createState() => _SocialButtonState();
+// }
+//
+// class _SocialButtonState extends State<_SocialButton> {
+//   bool _hovering = false;
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return MouseRegion(
+//       cursor: SystemMouseCursors.click,
+//       onEnter: (_) => setState(() => _hovering = true),
+//       onExit: (_) => setState(() => _hovering = false),
+//       child: GestureDetector(
+//         onTap: widget.onTap,
+//         child: AnimatedContainer(
+//           duration: kDurationFast,
+//           curve: kCurveHover,
+//           padding: const EdgeInsets.symmetric(vertical: 12),
+//           decoration: BoxDecoration(
+//             color: _hovering
+//                 ? context.colors.bgSurface
+//                 : Colors.transparent,
+//             borderRadius: BorderRadius.circular(kRadiusMd),
+//             border: Border.all(
+//               color: _hovering
+//                   ? context.colors.borderStrong
+//                   : context.colors.borderSubtle,
+//             ),
+//           ),
+//           child: Row(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             children: [
+//               Icon(widget.icon,
+//                   size: 20, color: context.colors.textSecondary),
+//               const SizedBox(width: 8),
+//               Text(
+//                 widget.label,
+//                 style: TextStyle(
+//                   fontFamily: kFontSans,
+//                   fontSize: 14,
+//                   fontWeight: FontWeight.w500,
+//                   color: context.colors.textSecondary,
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }

@@ -20,7 +20,7 @@ void main() {
 }
 
 // Set to true to skip login (no API needed for UI review)
-const bool kDevBypassLogin = true;
+const bool kDevBypassLogin = false;
 
 /// Global theme notifier — accessible via [EntrevistatApp.themeNotifier].
 final _themeNotifier = ThemeNotifier();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
@@ -26,21 +27,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    _nameController.text = prefs.getString('user_name') ?? 'Usuari';
-    _emailController.text = prefs.getString('user_email') ?? 'usuari@entrevistat.com';
+    try {
+      final profile = await ApiService.getUserProfile();
+      _nameController.text = profile['nom'] as String? ?? '';
+      _emailController.text = profile['email'] as String? ?? '';
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      _nameController.text = prefs.getString('user_name') ?? '';
+      _emailController.text = prefs.getString('user_email') ?? '';
+    }
     setState(() {});
   }
 
   Future<void> _save() async {
     if (_nameController.text.trim().isEmpty) return;
     setState(() { _loading = true; });
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_name', _nameController.text.trim());
-    await prefs.setString('user_email', _emailController.text.trim());
-    setState(() { _loading = false; _saved = true; });
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) context.go('/profile');
+    try {
+      await ApiService.updateUserProfile(
+        nom: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+      );
+      setState(() { _loading = false; _saved = true; });
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (mounted) context.go('/profile');
+    } catch (e) {
+      setState(() { _loading = false; });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    }
   }
 
   @override

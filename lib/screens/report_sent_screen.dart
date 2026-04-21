@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
@@ -18,7 +17,6 @@ class _ReportSentScreenState extends State<ReportSentScreen>
   late final AnimationController _anim;
   late final Animation<double> _scale;
   late final AnimationController _particleCtrl;
-  String _email = 'usuari@entrevistat.com';
 
   @override
   void initState() {
@@ -30,13 +28,6 @@ class _ReportSentScreenState extends State<ReportSentScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..forward();
-    _loadEmail();
-  }
-
-  Future<void> _loadEmail() async {
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('user_email');
-    if (email != null && mounted) setState(() { _email = email; });
   }
 
   @override
@@ -80,7 +71,7 @@ class _ReportSentScreenState extends State<ReportSentScreen>
                             color: kScoreGood.withValues(alpha: 0.1),
                             border: Border.all(color: kScoreGood.withValues(alpha: 0.4), width: 2),
                           ),
-                          child: const Icon(Icons.mark_email_read_outlined, color: kScoreGood, size: 52),
+                          child: const Icon(Icons.check_circle_outline_rounded, color: kScoreGood, size: 52),
                         ),
                       ),
                     ],
@@ -88,49 +79,21 @@ class _ReportSentScreenState extends State<ReportSentScreen>
                 ),
                 const SizedBox(height: kS32),
                 Text(
-                  'Informe enviat!',
+                  'Entrevista enviada!',
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: kS16),
                 Text(
-                  "El teu informe detallat amb els resultats\nde l'entrevista s'ha enviat al teu correu.",
+                  "El teu vídeo s'ha enviat correctament.\nEls resultats estaran disponibles en pocs minuts\ni els rebràs per correu electrònic.",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.6),
                   textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: kS16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS12),
-                  decoration: BoxDecoration(
-                    color: context.colors.bgSurface,
-                    borderRadius: BorderRadius.circular(kRadiusMd),
-                    border: Border.all(color: context.colors.borderSubtle),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.email_outlined, color: kAccent, size: 18),
-                      const SizedBox(width: kS8),
-                      Flexible(
-                        child: Text(_email,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis),
-                      ),
-                    ],
-                  ),
                 ),
                 const SizedBox(height: kS48),
                 ElevatedButton.icon(
                   onPressed: () => context.go('/home'),
                   icon: const Icon(Icons.home_rounded, size: 20),
                   label: const Text("Tornar a l'inici"),
-                ),
-                const SizedBox(height: kS24),
-                TextButton(
-                  onPressed: () => context.go('/results/${widget.sessionId}'),
-                  child: const Text('Veure resultats complets'),
                 ),
               ],
             ),

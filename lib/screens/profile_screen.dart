@@ -5,7 +5,6 @@ import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
-import '../widgets/app_card.dart';
 import '../widgets/app_section_header.dart';
 import '../widgets/app_empty_state.dart';
 import '../widgets/session_tile.dart';
@@ -39,33 +38,35 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _name = prefs.getString('user_name') ?? 'Usuari';
-      _email = prefs.getString('user_email') ?? 'usuari@entrevistat.com';
-    });
+    try {
+      final profile = await ApiService.getUserProfile();
+      setState(() {
+        _name = profile['nom'] as String? ?? 'Usuari';
+        _email = profile['email'] as String? ?? '';
+      });
+    } catch (_) {
+      // Fall back to cached values
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _name = prefs.getString('user_name') ?? 'Usuari';
+        _email = prefs.getString('user_email') ?? '';
+      });
+    }
     try {
       final sessions = await ApiService.getRecentSessions();
       setState(() { _sessions = sessions; });
-    } catch (_) {
-      // sense sessions
-    } finally {
-      setState(() { _loading = false; });
-      _statsCtrl.forward();
-      _listCtrl
-        ..duration = Duration(milliseconds: 600 + 100 * _sessions.length)
-        ..forward();
-    }
+    } catch (_) {}
+    setState(() { _loading = false; });
+    _statsCtrl.forward();
+    _listCtrl
+      ..duration = Duration(milliseconds: 600 + 100 * _sessions.length)
+      ..forward();
   }
 
   double get _avgScore {
-    if (_sessions.isEmpty) return 0;
-    return _sessions.map((s) => s.overallScore).reduce((a, b) => a + b) / _sessions.length;
-  }
-
-  String get _bestCategory {
-    if (_sessions.isEmpty) return '-';
-    return _sessions.reduce((a, b) => a.overallScore > b.overallScore ? a : b).categoryName;
+    final completed = _sessions.where((s) => s.overallScore != null).toList();
+    if (completed.isEmpty) return 0;
+    return completed.map((s) => s.overallScore!).reduce((a, b) => a + b) / completed.length;
   }
 
   @override
@@ -99,8 +100,6 @@ class _ProfileScreenState extends State<ProfileScreen>
               padding: const EdgeInsets.all(kPagePadding),
               children: [
                 _buildUserCard(),
-                const SizedBox(height: kS16),
-                _buildStatsRow(),
                 const SizedBox(height: kS32),
                 AppSectionHeader(title: 'Informes passats'),
                 const SizedBox(height: kS16),
@@ -155,85 +154,89 @@ class _ProfileScreenState extends State<ProfileScreen>
           color: context.colors.bgElevated,
           borderRadius: BorderRadius.circular(kRadiusMd),
         ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 36,
-              backgroundColor: kAccent.withValues(alpha: 0.08),
-              child: const Icon(Icons.person, color: kAccent, size: 38),
-            ),
-            const SizedBox(width: kS16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_name, style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: kS4),
-                  Text(_email, style: Theme.of(context).textTheme.bodySmall),
-                  const SizedBox(height: kS12),
-                  const AppChip('Pla gratuït'),
-                ],
-              ),
-            ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final badgeWidth = (constraints.maxWidth * 0.5 - kS16 - kS12) / 2;
+            return Row(
+              children: [
+                CircleAvatar(
+                  radius: 36,
+                  backgroundColor: kAccent.withValues(alpha: 0.08),
+                  child: const Icon(Icons.person, color: kAccent, size: 38),
+                ),
+                const SizedBox(width: kS16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_name, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: kS4),
+                      Text(_email, style: Theme.of(context).textTheme.bodySmall),
+                      const SizedBox(height: kS12),
+                      const AppChip('Pla gratuït'),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: kS12),
+                IntrinsicHeight(
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: badgeWidth,
+                        child: _statBadge('${_sessions.length}', 'Sessions', Icons.videocam_outlined),
+                      ),
+                      const SizedBox(width: kS12),
+                      SizedBox(
+                        width: badgeWidth,
+                        child: _statBadge('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildStatsRow() {
-    return Row(
-      children: [
-        Expanded(child: _statCard('${_sessions.length}', 'Sessions', Icons.videocam_outlined, isNumeric: true)),
-        const SizedBox(width: kS12),
-        Expanded(child: _statCard('${_avgScore.toInt()}%', 'Puntuació\nmitja', Icons.bar_chart_rounded, isNumeric: true)),
-        const SizedBox(width: kS12),
-        Expanded(child: _statCard(_bestCategory, 'Millor\ncategoria', Icons.star_outline_rounded)),
-      ],
-    );
-  }
+  Widget _statBadge(String value, String label, IconData icon) {
+    final curved = CurvedAnimation(parent: _statsCtrl, curve: kCurveEntrance);
+    final numericPart = RegExp(r'\d+').firstMatch(value);
 
-  Widget _statCard(String value, String label, IconData icon, {bool isNumeric = false}) {
-    return AppCard(
-      padding: const EdgeInsets.symmetric(vertical: kS16, horizontal: kS12),
-      child: Column(
-        children: [
-          Icon(icon, color: kAccent, size: 20),
-          const SizedBox(height: kS8),
-          isNumeric
-              ? AnimatedBuilder(
-                  animation: _statsCtrl,
-                  builder: (_, __) {
-                    final numericPart = RegExp(r'\d+').firstMatch(value);
-                    if (numericPart == null) {
-                      return Text(value,
-                          style: Theme.of(context).textTheme.titleSmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center);
-                    }
-                    final target = int.parse(numericPart.group(0)!);
-                    final curvedProgress = kCurveEntrance.transform(_statsCtrl.value);
-                    final current = (target * curvedProgress).round();
-                    final display = value.replaceFirst(numericPart.group(0)!, '$current');
-                    return Text(display,
-                        style: Theme.of(context).textTheme.titleSmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center);
-                  },
-                )
-              : Text(value,
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, _) {
+        String display = value;
+        if (numericPart != null) {
+          final target = int.parse(numericPart.group(0)!);
+          final current = (target * curved.value).round();
+          display = value.replaceFirst(numericPart.group(0)!, '$current');
+        }
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: kS12, horizontal: kS12),
+          decoration: BoxDecoration(
+            color: context.colors.bgSurface,
+            borderRadius: BorderRadius.circular(kRadiusMd),
+            border: Border.all(color: context.colors.borderSubtle),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: kAccent, size: 20),
+              const SizedBox(height: kS6),
+              Text(display,
                   style: Theme.of(context).textTheme.titleSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center),
-          const SizedBox(height: kS4),
-          Text(label,
-              style: Theme.of(context).textTheme.labelSmall,
-              textAlign: TextAlign.center),
-        ],
-      ),
+              const SizedBox(height: kS4),
+              Text(label,
+                  style: Theme.of(context).textTheme.labelSmall,
+                  textAlign: TextAlign.center),
+            ],
+          ),
+        );
+      },
     );
   }
 }
