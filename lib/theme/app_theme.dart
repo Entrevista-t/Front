@@ -106,6 +106,7 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: c.bgBase,
         foregroundColor: c.textPrimary,
+        centerTitle: true,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleTextStyle: _sansStyle.copyWith(

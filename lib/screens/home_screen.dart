@@ -6,11 +6,13 @@ import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart' show kFontSans;
-import '../widgets/app_section_header.dart';
+// TODO: Uncomment when recent sessions section is re-enabled
+// import '../widgets/app_section_header.dart';
 import '../widgets/dot_grid_background.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/glow_icon.dart';
-import '../widgets/session_tile.dart';
+// TODO: Uncomment when recent sessions section is re-enabled
+// import '../widgets/session_tile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,24 +23,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen>
     with TickerProviderStateMixin {
-  static const _catDescriptions = {
-    'software': 'Algorismes, arquitectura i sistemes',
-    'data': 'Anàlisi de dades i machine learning',
-    'design': 'UX/UI, prototipatge i recerca',
-    'management': 'Lideratge, àgil i planificació',
-    'marketing': 'Estratègia digital i xarxes',
-    'general': 'Competències transversals',
-    'finance': 'Comptabilitat, inversió i auditoria',
-    'sales': 'Estratègies comercials i negociació',
-    'hr': 'Selecció, formació i cultura',
-    'legal': 'Normativa, contractes i compliance',
-    'healthcare': 'Diagnòstic, recerca i atenció',
-    'education': 'Pedagogia, formació i didàctica',
-    'devops': 'CI/CD, infraestructura i cloud',
-    'cybersecurity': 'Seguretat, xarxes i criptografia',
-    'product': 'Roadmap, mètriques i discovery',
-    'communication': 'Oratòria, mitjans i redacció',
-  };
 
   List<InterviewCategory> _categories = [];
   List<InterviewCategory> _filteredCategories = [];
@@ -53,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   String get _greeting {
     final hour = DateTime.now().hour;
-    final name = ApiService.devUserName ?? 'Usuari';
+    final name = ApiService.userName ?? 'Usuari';
     if (hour < 12) return 'Bon dia, $name';
     if (hour < 20) return 'Bona tarda, $name';
     return 'Bona nit, $name';
@@ -178,8 +162,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   double get _averageScore {
-    if (_recentSessions.isEmpty) return 0;
-    return _recentSessions.map((s) => s.overallScore).reduce((a, b) => a + b) / _recentSessions.length;
+    final completed = _recentSessions.where((s) => s.overallScore != null).toList();
+    if (completed.isEmpty) return 0;
+    return completed.map((s) => s.overallScore!).reduce((a, b) => a + b) / completed.length;
   }
 
   @override
@@ -313,31 +298,32 @@ class _HomeScreenState extends State<HomeScreen>
                     const SizedBox(height: kS24),
                   ],
 
+                  // TODO: Uncomment when ready to show recent sessions
                   // ── Recent sessions ─────────────────────────────────
-                  if (_recentSessions.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                      child: AppSectionHeader(
-                        title: 'Sessions recents',
-                        trailing: Text(
-                          'Veure totes',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: kAccent, fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: kS12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                      child: Column(
-                        children: _recentSessions.map((s) => SessionTile(
-                          session: s,
-                          onTap: () => context.go('/results/${s.id}'),
-                        )).toList(),
-                      ),
-                    ),
-                  ],
+                  // if (_recentSessions.isNotEmpty) ...[
+                  //   Padding(
+                  //     padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                  //     child: AppSectionHeader(
+                  //       title: 'Sessions recents',
+                  //       trailing: Text(
+                  //         'Veure totes',
+                  //         style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  //           color: kAccent, fontWeight: FontWeight.w600,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
+                  //   const SizedBox(height: kS12),
+                  //   Padding(
+                  //     padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                  //     child: Column(
+                  //       children: _recentSessions.map((s) => SessionTile(
+                  //         session: s,
+                  //         onTap: () => context.go('/results/${s.id}'),
+                  //       )).toList(),
+                  //     ),
+                  //   ),
+                  // ],
                   const SizedBox(height: kS24),
                 ],
               ),
@@ -362,6 +348,9 @@ class _HomeScreenState extends State<HomeScreen>
     }
 
     final totalMs = (150 * (cats.length - 1) + 400).clamp(400, 2000);
+    // Per-item stagger scales with clamped duration so every item
+    // reaches full opacity when the animation completes.
+    final stagger = cats.length <= 1 ? 0.0 : (totalMs - 400) / (cats.length - 1);
     const rows = 2;
     const spacing = kS16;
     const hoverOverflow = 6.0;
@@ -443,12 +432,15 @@ class _HomeScreenState extends State<HomeScreen>
                             scrollDirection: Axis.horizontal,
                             physics: _ColumnSnapScrollPhysics(
                                 columnExtent: columnExtent,
+                                trailingGap: spacing,
                                 parent: const ClampingScrollPhysics()),
                             padding: EdgeInsets.zero,
                             itemCount: colCount,
-                            itemExtent: columnExtent,
                             itemBuilder: (context, colIndex) {
-                              return Column(
+                              final isLastCol = colIndex == colCount - 1;
+                              return SizedBox(
+                                width: isLastCol ? cardWidth : columnExtent,
+                                child: Column(
                                 children: [
                                   SizedBox(height: hoverOverflow),
                                   ...List.generate(rows, (rowIndex) {
@@ -462,11 +454,11 @@ class _HomeScreenState extends State<HomeScreen>
                                     }
                                     final cat = cats[catIndex];
                                     final desc =
-                                        _catDescriptions[cat.id] ?? '';
+                                        cat.description ?? '';
                                     final currentMs =
                                         _entranceCtrl.value * totalMs;
                                     final t = ((currentMs -
-                                                150.0 * catIndex) /
+                                                stagger * catIndex) /
                                             400.0)
                                         .clamp(0.0, 1.0);
                                     final val =
@@ -499,6 +491,7 @@ class _HomeScreenState extends State<HomeScreen>
                                     );
                                   }),
                                 ],
+                              ),
                               );
                             },
                           ),
@@ -565,6 +558,8 @@ class _HomeScreenState extends State<HomeScreen>
           iconSize: 20,
         ),
         const SizedBox(width: kS12),
+        Text('Puntuació Mitjana: ',
+            style: Theme.of(context).textTheme.bodySmall),
         Text('${_averageScore.toInt()}%',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(color: kAccent)),
         const SizedBox(width: kS8),
@@ -707,7 +702,7 @@ class _GridArrow extends StatelessWidget {
   }
 }
 
-// ── AppBar theme toggle button ─────────────────────────────────────────────
+// ── AppBar theme toggle button (mobile only) ───────────────────────────────
 class _ThemeToggleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -795,16 +790,6 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
         _menuItem(Icons.person_outline_rounded, 'Perfil', 'profile'),
         _menuItem(Icons.edit_outlined, 'Editar perfil', 'edit'),
         const PopupMenuDivider(height: 1),
-        _menuItem(
-          Theme.of(context).brightness == Brightness.dark
-              ? Icons.light_mode_rounded
-              : Icons.dark_mode_rounded,
-          Theme.of(context).brightness == Brightness.dark
-              ? 'Mode clar'
-              : 'Mode fosc',
-          'toggle_theme',
-        ),
-        const PopupMenuDivider(height: 1),
         _menuItem(Icons.logout_rounded, 'Tancar sessió', 'logout',
             color: kErrorRed),
       ],
@@ -815,8 +800,6 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
           widget.onProfile();
         case 'edit':
           widget.onEdit();
-        case 'toggle_theme':
-          EntrevistatApp.themeNotifier.toggle();
         case 'logout':
           widget.onLogout();
       }
@@ -889,9 +872,11 @@ class _ProfileMenuButtonState extends State<_ProfileMenuButton>
 // ── Scroll physics that snaps to column boundaries ─────────────────────────
 class _ColumnSnapScrollPhysics extends ScrollPhysics {
   final double columnExtent;
+  final double trailingGap;
 
   const _ColumnSnapScrollPhysics({
     required this.columnExtent,
+    this.trailingGap = 0,
     super.parent,
   });
 
@@ -899,6 +884,7 @@ class _ColumnSnapScrollPhysics extends ScrollPhysics {
   _ColumnSnapScrollPhysics applyTo(ScrollPhysics? ancestor) {
     return _ColumnSnapScrollPhysics(
       columnExtent: columnExtent,
+      trailingGap: trailingGap,
       parent: buildParent(ancestor),
     );
   }
@@ -910,6 +896,7 @@ class _ColumnSnapScrollPhysics extends ScrollPhysics {
   @override
   Simulation? createBallisticSimulation(
       ScrollMetrics position, double velocity) {
+    final effectiveMax = position.maxScrollExtent;
     if ((velocity.abs() < toleranceFor(position).velocity) &&
         (position.pixels - _snapToColumn(position.pixels)).abs() <
             toleranceFor(position).distance) {
@@ -922,7 +909,7 @@ class _ColumnSnapScrollPhysics extends ScrollPhysics {
           : velocity < 0
               ? position.pixels - columnExtent * 0.5
               : position.pixels,
-    ).clamp(position.minScrollExtent, position.maxScrollExtent);
+    ).clamp(position.minScrollExtent, effectiveMax);
 
     if (target == position.pixels) return null;
 

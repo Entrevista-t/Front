@@ -95,10 +95,8 @@ class _InterviewScreenState extends State<InterviewScreen>
 
   Future<void> _loadQuestion() async {
     try {
-      final questions = await ApiService.getQuestions(widget.categoryId);
-      setState(() {
-        _question = questions.isNotEmpty ? questions.first : Question.fallback().first;
-      });
+      final question = await ApiService.getRandomQuestion(widget.categoryId);
+      setState(() { _question = question; });
     } catch (_) {
       setState(() { _question = Question.fallback().first; });
     }
@@ -182,12 +180,19 @@ class _InterviewScreenState extends State<InterviewScreen>
     setState(() { _recording = false; _uploading = true; });
     try {
       final file = await camera.stopVideoRecording();
-      final sessionId = await ApiService.submitInterview(
-        categoryId: widget.categoryId,
+      final bytes = await file.readAsBytes();
+      // Web cameras typically record WebM; ensure filename has a valid extension
+      var name = file.name;
+      if (!RegExp(r'\.(mp4|webm|avi|mov|mkv|m4v|wmv)$', caseSensitive: false).hasMatch(name)) {
+        name = 'recording.webm';
+      }
+      final interviewId = await ApiService.submitInterview(
         questionId: question.id,
-        videoPath: file.path,
+        questionText: question.text,
+        videoBytes: bytes,
+        fileName: name,
       );
-      if (mounted) context.go('/report-sent/$sessionId');
+      if (mounted) context.go('/report-sent/$interviewId');
     } catch (e) {
       setState(() { _uploading = false; _error = 'Error en enviar la gravació: $e'; });
     }

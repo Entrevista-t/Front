@@ -90,7 +90,7 @@ class PrivacyPolicyScreen extends StatefulWidget {
       'Contacte',
       "Si tens qualsevol pregunta o dubte sobre aquesta política de privacitat "
           "o sobre el tractament de les teves dades, pots contactar-nos a:\n\n"
-          "• Correu electrònic: privacitat@entrevistat.cat\n"
+          "• Correu electrònic: privacitat@entrevistat.kire.ovh\n"
           "• GitHub: github.com/Entrevista-t",
     ),
   ];

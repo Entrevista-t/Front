@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/interview_models.dart';
@@ -18,14 +17,13 @@ class ResultsScreen extends StatefulWidget {
 }
 
 /// Total number of staggered sections for entrance animation.
-const _sectionCount = 7;
+const _sectionCount = 6;
 
 class _ResultsScreenState extends State<ResultsScreen>
     with TickerProviderStateMixin {
   InterviewResult? _result;
   bool _loading = true;
-  bool _downloading = false;
-
+  String? _error;
   // Animated score circles controller
   late final AnimationController _scoreCtrl;
 
@@ -84,32 +82,14 @@ class _ResultsScreenState extends State<ResultsScreen>
     try {
       final r = await ApiService.getResults(widget.sessionId);
       setState(() { _result = r; });
-    } catch (_) {
-      setState(() { _result = InterviewResult.mock(); });
+    } catch (e) {
+      setState(() { _error = e.toString().replaceAll('Exception: ', ''); });
     } finally {
       setState(() { _loading = false; });
-      _scoreCtrl.forward();
-      _staggerCtrl.forward();
-    }
-  }
-
-  Future<void> _downloadPdf() async {
-    setState(() { _downloading = true; });
-    try {
-      await ApiService.downloadPdf(widget.sessionId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PDF descarregat correctament')),
-        );
+      if (_result != null) {
+        _scoreCtrl.forward();
+        _staggerCtrl.forward();
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-        );
-      }
-    } finally {
-      setState(() { _downloading = false; });
     }
   }
 
@@ -139,6 +119,58 @@ class _ResultsScreenState extends State<ResultsScreen>
       );
     }
 
+    if (_error != null || _result == null) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.home_rounded),
+            onPressed: () => context.go('/home'),
+          ),
+          title: const Text('Informe'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(kS32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline_rounded, size: 64, color: context.colors.textTertiary),
+                const SizedBox(height: kS24),
+                Text(
+                  'No s\'han pogut carregar els resultats',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: kS12),
+                Text(
+                  _error ?? 'Error desconegut',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.colors.textSecondary, height: 1.6,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: kS32),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() { _loading = true; _error = null; });
+                    _load();
+                  },
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  label: const Text('Tornar a intentar'),
+                ),
+                const SizedBox(height: kS12),
+                TextButton.icon(
+                  onPressed: () => context.go('/home'),
+                  icon: const Icon(Icons.home_rounded, size: 20),
+                  label: const Text("Tornar a l'inici"),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final r = _result!;
 
     return Scaffold(
@@ -148,45 +180,22 @@ class _ResultsScreenState extends State<ResultsScreen>
           onPressed: () => context.go('/home'),
         ),
         title: const Text('Informe'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: kS8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: kAccent.withValues(alpha: 0.07),
-                borderRadius: BorderRadius.circular(kRadiusSm),
-              ),
-              child: IconButton(
-                icon: _downloading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.picture_as_pdf_rounded),
-                onPressed: _downloading ? null : _downloadPdf,
-                tooltip: 'Descarregar PDF',
-              ),
-            ),
-          ),
-        ],
+        actions: const [],
       ),
       body: ListView(
         padding: const EdgeInsets.all(kPagePadding),
         children: [
           _entrance(0, _buildCategoryHeader(r)),
-          const SizedBox(height: kS16),
-          _entrance(1, _buildPerformanceSection(r)),
-          const SizedBox(height: kS16),
-          _entrance(2, _buildStrengthsWeaknessesChart(r)),
-          const SizedBox(height: kS16),
-          _entrance(3, _buildAiFeedback(r)),
-          const SizedBox(height: kS16),
-          _entrance(4, _buildDetailCards(r)),
-          const SizedBox(height: kS16),
-          _entrance(5, _buildReportsList(r)),
           const SizedBox(height: kS24),
-          _entrance(6, ElevatedButton(
+          _entrance(1, _buildPerformanceRow(r)),
+          const SizedBox(height: kS16),
+          _entrance(2, _buildTranscript(r)),
+          const SizedBox(height: kS16),
+          _entrance(3, _buildDetailCards(r)),
+          const SizedBox(height: kS16),
+          _entrance(4, _buildReportsList(r)),
+          const SizedBox(height: kS24),
+          _entrance(5, ElevatedButton(
             onPressed: () => context.go('/home'),
             child: const Text('Nova simulació'),
           )),
@@ -197,16 +206,87 @@ class _ResultsScreenState extends State<ResultsScreen>
   }
 
   Widget _buildCategoryHeader(InterviewResult r) {
-    return Row(
-      children: [
-        AppChip(r.categoryName),
-        const SizedBox(width: kS8),
-        Text(r.formattedDate, style: Theme.of(context).textTheme.bodySmall),
-      ],
+    final color = scoreColor(r.overallScore);
+    final curved = CurvedAnimation(parent: _scoreCtrl, curve: Curves.easeOutCubic);
+    final tween = Tween<double>(begin: 0, end: r.overallScore / 100);
+
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, child) {
+        final animValue = tween.evaluate(curved);
+        return Center(
+          child: Column(
+            children: [
+              SizedBox(
+                width: 160, height: 160,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 160, height: 160,
+                      child: CircularProgressIndicator(
+                        value: animValue,
+                        strokeWidth: 12,
+                        backgroundColor: context.colors.borderSubtle,
+                        valueColor: AlwaysStoppedAnimation(color),
+                        strokeCap: StrokeCap.round,
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${(animValue * 100).toInt()}%',
+                          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                            fontWeight: FontWeight.bold, color: color,
+                          ),
+                        ),
+                        Text(
+                          'Puntuació global',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: context.colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildPerformanceSection(InterviewResult r) {
+  Widget _buildPerformanceRow(InterviewResult r) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 600;
+        final rendiment = _buildRendimentCard(r);
+        final punts = _buildStrengthsBars(r);
+        if (wide) {
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: rendiment),
+                const SizedBox(width: kS16),
+                Expanded(child: punts),
+              ],
+            ),
+          );
+        }
+        return Column(children: [
+          rendiment,
+          const SizedBox(height: kS16),
+          punts,
+        ]);
+      },
+    );
+  }
+
+  Widget _buildRendimentCard(InterviewResult r) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +294,7 @@ class _ResultsScreenState extends State<ResultsScreen>
           AppSectionHeader(title: 'Rendiment'),
           const SizedBox(height: kS24),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _circleScore('Contingut', r.contentScore),
               _circleScore('Fluïdesa', r.fluencyScore),
@@ -223,6 +303,67 @@ class _ResultsScreenState extends State<ResultsScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStrengthsBars(InterviewResult r) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppSectionHeader(title: 'Punts forts i febles'),
+          const SizedBox(height: kS20),
+          _horizontalBar('Contingut', r.contentScore),
+          const SizedBox(height: kS16),
+          _horizontalBar('Fluïdesa', r.fluencyScore),
+          const SizedBox(height: kS16),
+          _horizontalBar('Lèxic', r.lexicalScore),
+          const SizedBox(height: kS16),
+          _horizontalBar('Estructura', r.structureScore),
+          const SizedBox(height: kS16),
+          _horizontalBar('Seguretat', r.confidenceScore),
+        ],
+      ),
+    );
+  }
+
+  Widget _horizontalBar(String label, double value) {
+    final color = scoreColor(value);
+    final curved = CurvedAnimation(parent: _scoreCtrl, curve: Curves.easeOutCubic);
+    final tween = Tween<double>(begin: 0, end: (value / 100).clamp(0.0, 1.0));
+
+    return AnimatedBuilder(
+      animation: curved,
+      builder: (context, child) {
+        final animValue = tween.evaluate(curved);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(label, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  '${(animValue * 100).toInt()}%',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600, color: color,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: kS4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(kRadiusSm),
+              child: LinearProgressIndicator(
+                value: animValue,
+                minHeight: 10,
+                backgroundColor: context.colors.borderSubtle,
+                valueColor: AlwaysStoppedAnimation(color),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -241,20 +382,23 @@ class _ResultsScreenState extends State<ResultsScreen>
         return Column(
           children: [
             SizedBox(
-              width: 82, height: 82,
+              width: 130, height: 130,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  CircularProgressIndicator(
-                    value: animValue,
-                    strokeWidth: 9,
-                    backgroundColor: context.colors.borderSubtle,
-                    valueColor: AlwaysStoppedAnimation(color),
-                    strokeCap: StrokeCap.round,
+                  SizedBox(
+                    width: 130, height: 130,
+                    child: CircularProgressIndicator(
+                      value: animValue,
+                      strokeWidth: 10,
+                      backgroundColor: context.colors.borderSubtle,
+                      valueColor: AlwaysStoppedAnimation(color),
+                      strokeCap: StrokeCap.round,
+                    ),
                   ),
                   Text(
                     '${(animValue * 100).toInt()}%',
-                    style: Theme.of(context).textTheme.titleSmall,
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ],
               ),
@@ -267,75 +411,7 @@ class _ResultsScreenState extends State<ResultsScreen>
     );
   }
 
-  Widget _buildStrengthsWeaknessesChart(InterviewResult r) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppSectionHeader(title: 'Punts forts i febles'),
-          const SizedBox(height: kS24),
-          SizedBox(
-            height: 160,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: 100,
-                barTouchData: BarTouchData(enabled: false),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 28,
-                      getTitlesWidget: (value, _) {
-                        const labels = ['Cont.', 'Fluï.', 'Mirad.', 'Estr.', 'Conf.'];
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            labels[value.toInt()],
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                gridData: const FlGridData(show: false),
-                barGroups: [
-                  _bar(0, r.contentScore),
-                  _bar(1, r.fluencyScore),
-                  _bar(2, r.eyeContactPercent),
-                  _bar(3, r.structureScore),
-                  _bar(4, r.confidenceScore),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  BarChartGroupData _bar(int x, double value) {
-    return BarChartGroupData(x: x, barRods: [
-      BarChartRodData(
-        toY: value,
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [kAccent.withValues(alpha: 0.6), kAccent],
-        ),
-        width: 22,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(kRadiusSm)),
-      ),
-    ]);
-  }
-
-  Widget _buildAiFeedback(InterviewResult r) {
+  Widget _buildTranscript(InterviewResult r) {
     final radius = BorderRadius.circular(kRadiusMd);
     return Container(
       decoration: BoxDecoration(
@@ -353,13 +429,13 @@ class _ResultsScreenState extends State<ResultsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              const Icon(Icons.auto_awesome_rounded, color: kAccent, size: 18),
+              const Icon(Icons.text_snippet_rounded, color: kAccent, size: 18),
               const SizedBox(width: kS8),
-              AppSectionHeader(title: 'Feedback IA'),
+              AppSectionHeader(title: 'Transcripció'),
             ]),
             const SizedBox(height: kS12),
             Text(
-              r.aiFeedback,
+              r.transcript ?? 'No disponible',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: context.colors.textSecondary, height: 1.6,
               ),
@@ -373,21 +449,13 @@ class _ResultsScreenState extends State<ResultsScreen>
   Widget _buildDetailCards(InterviewResult r) {
     return Row(
       children: [
-        Expanded(
-          child: _miniCard(r.wordsPerMinute.toStringAsFixed(0), 'ppm', Icons.speed_rounded),
-        ),
+        Expanded(child: _miniCard(r.wordsPerMinute.toStringAsFixed(0), 'Paraules per minut', Icons.speed_rounded)),
         const SizedBox(width: kS8),
-        Expanded(
-          child: _miniCard('${r.eyeContactPercent.toStringAsFixed(0)}%', 'contacte visual', Icons.visibility_rounded),
-        ),
+        Expanded(child: _miniCard('${r.speechRatio.toStringAsFixed(0)}%', 'Temps de parla', Icons.mic_rounded)),
         const SizedBox(width: kS8),
-        Expanded(
-          child: _miniCard('${r.excessivePauses}', 'pauses llargues', Icons.pause_rounded),
-        ),
+        Expanded(child: _miniCard(_emotionLabel(r.dominantEmotion), 'Emoció predominant', Icons.face_rounded)),
         const SizedBox(width: kS8),
-        Expanded(
-          child: _miniCard('${r.fillerWordsCount}', 'paraules falca', Icons.record_voice_over_rounded),
-        ),
+        Expanded(child: _miniCard('${r.lexicalScore.toStringAsFixed(0)}%', 'Riquesa lèxica', Icons.auto_stories_rounded)),
       ],
     );
   }
@@ -437,27 +505,25 @@ class _ResultsScreenState extends State<ResultsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSectionHeader(title: 'Resum'),
+          AppSectionHeader(title: 'Detall de metriques'),
           const SizedBox(height: kS12),
           const Divider(),
-          ...r.strengths.asMap().entries.map((e) => _reportItem(
-                'Punt fort ${e.key + 1}',
-                e.value,
-                kScoreGood,
-                Icons.check_circle_outline_rounded,
-              )),
-          ...r.improvements.asMap().entries.map((e) => _reportItem(
-                'A millorar ${e.key + 1}',
-                e.value,
-                kScoreMid,
-                Icons.arrow_upward_rounded,
-              )),
+          _reportItem('Alineació amb la pregunta', (r.questionAlignment ?? 0).toStringAsFixed(2), kAccent, Icons.track_changes_rounded,
+            description: "Mesura com de relacionada està la resposta amb la pregunta formulada."),
+          _reportItem('Coherència del discurs', (r.discourseCoherence ?? 0).toStringAsFixed(2), kAccent, Icons.linear_scale_rounded,
+            description: "Avalua la connexió lògica i el fil conductor entre les idees exposades."),
+          _reportItem('Densitat informativa', (r.informationDensity ?? 0).toStringAsFixed(2), kAccent, Icons.density_medium_rounded,
+            description: "Proporció de paraules amb contingut rellevant respecte al total."),
+          _reportItem("Índex d'especificitat", (r.specificityIndex ?? 0).toStringAsFixed(2), kAccent, Icons.precision_manufacturing_rounded,
+            description: "Grau de concreció i detall en la resposta, evitant generalitats."),
+          _reportItem('Estabilitat emocional', (r.emotionalConsistency ?? 0).toStringAsFixed(2), kAccent, Icons.psychology_rounded,
+            description: "Consistència de les expressions facials durant la resposta."),
         ],
       ),
     );
   }
 
-  Widget _reportItem(String title, String subtitle, Color color, IconData icon) {
+  Widget _reportItem(String label, String value, Color color, IconData icon, {String? description}) {
     return Column(
       children: [
         const SizedBox(height: kS12),
@@ -476,15 +542,24 @@ class _ResultsScreenState extends State<ResultsScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleSmall),
-                  const SizedBox(height: kS4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(label, style: Theme.of(context).textTheme.titleSmall),
+                  if (description != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.colors.textTertiary, height: 1.3,
+                      ),
+                    ),
+                  ],
                 ],
+              ),
+            ),
+            const SizedBox(width: kS8),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: color,
               ),
             ),
           ],
@@ -493,5 +568,16 @@ class _ResultsScreenState extends State<ResultsScreen>
         const Divider(),
       ],
     );
+  }
+
+  static const _emotionTranslations = {
+    'positive': 'Positiva',
+    'neutral': 'Neutral',
+    'tense': 'Tensa',
+  };
+
+  String _emotionLabel(String? emotion) {
+    if (emotion == null) return '-';
+    return _emotionTranslations[emotion.toLowerCase()] ?? emotion;
   }
 }
