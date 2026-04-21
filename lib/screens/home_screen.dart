@@ -9,7 +9,8 @@ import '../theme/app_theme.dart' show kFontSans;
 // TODO: Uncomment when recent sessions section is re-enabled
 // import '../widgets/app_section_header.dart';
 import '../widgets/dot_grid_background.dart';
-import '../widgets/glass_container.dart';
+// GlassContainer currently unused after stats row redesign
+// import '../widgets/glass_container.dart';
 import '../widgets/glow_icon.dart';
 // TODO: Uncomment when recent sessions section is re-enabled
 // import '../widgets/session_tile.dart';
