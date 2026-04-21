@@ -155,6 +155,7 @@ class InterviewResult {
   final int interviewId;
   final String status;
   final String? transcript;
+  final String? questionText;
 
   final double? durationTotal;
   final double? activeSpeechTime;
@@ -175,6 +176,7 @@ class InterviewResult {
     required this.interviewId,
     required this.status,
     this.transcript,
+    this.questionText,
     this.durationTotal,
     this.activeSpeechTime,
     this.confidenceIndex,
@@ -264,6 +266,7 @@ class InterviewResult {
       interviewId: json['id_entrevista'] as int? ?? 0,
       status: json['estat_proces'] as String? ?? 'pendent',
       transcript: metriques['transcript'] as String?,
+      questionText: null,
       durationTotal: (audio['duration_total'] as num?)?.toDouble(),
       activeSpeechTime: (audio['active_speech_time'] as num?)?.toDouble(),
       confidenceIndex: confidenceVal,
@@ -284,6 +287,7 @@ class InterviewResult {
         status: 'completat',
         transcript: 'He treballat en diversos projectes de software. '
             "El meu enfocament principal es assegurar la qualitat del codi.",
+        questionText: 'Explica la teva experiència professional més rellevant.',
         durationTotal: 120.0,
         activeSpeechTime: 95.0,
         confidenceIndex: 0.72,

@@ -22,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _loading = true;
   String _name = 'Usuari';
   String _email = 'usuari@entrevistat.com';
+  String? _photoUrl;
 
   late final AnimationController _statsCtrl;
   late final AnimationController _listCtrl;
@@ -43,6 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       setState(() {
         _name = profile['nom'] as String? ?? 'Usuari';
         _email = profile['email'] as String? ?? '';
+        _photoUrl = profile['url_foto'] as String?;
       });
     } catch (_) {
       // Fall back to cached values
@@ -96,9 +98,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(kPagePadding),
-              children: [
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: ListView(
+                  padding: const EdgeInsets.all(kPagePadding),
+                  children: [
                 _buildUserCard(),
                 const SizedBox(height: kS32),
                 AppSectionHeader(title: 'Informes passats'),
@@ -138,6 +143,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(height: kS24),
               ],
             ),
+          ),
+        ),
     );
   }
 
@@ -156,13 +163,18 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final badgeWidth = (constraints.maxWidth * 0.5 - kS16 - kS12) / 2;
-            return Row(
+            final isMobile = constraints.maxWidth < 500;
+            final userInfo = Row(
               children: [
                 CircleAvatar(
                   radius: 36,
                   backgroundColor: kAccent.withValues(alpha: 0.08),
-                  child: const Icon(Icons.person, color: kAccent, size: 38),
+                  backgroundImage: _photoUrl != null
+                      ? NetworkImage('${ApiService.baseUrl}$_photoUrl')
+                      : null,
+                  child: _photoUrl == null
+                      ? const Icon(Icons.person, color: kAccent, size: 38)
+                      : null,
                 ),
                 const SizedBox(width: kS16),
                 Expanded(
@@ -177,19 +189,44 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ],
                   ),
                 ),
+              ],
+            );
+
+            final statBadges = IntrinsicHeight(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _statBadge('${_sessions.length}', 'Sessions', Icons.videocam_outlined),
+                  ),
+                  const SizedBox(width: kS12),
+                  Expanded(
+                    child: _statBadge('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded),
+                  ),
+                ],
+              ),
+            );
+
+            if (isMobile) {
+              return Column(
+                children: [
+                  userInfo,
+                  const SizedBox(height: kS16),
+                  statBadges,
+                ],
+              );
+            }
+
+            final badgeWidth = (constraints.maxWidth * 0.5 - kS16 - kS12) / 2;
+            return Row(
+              children: [
+                Expanded(child: userInfo),
                 const SizedBox(width: kS12),
                 IntrinsicHeight(
                   child: Row(
                     children: [
-                      SizedBox(
-                        width: badgeWidth,
-                        child: _statBadge('${_sessions.length}', 'Sessions', Icons.videocam_outlined),
-                      ),
+                      SizedBox(width: badgeWidth, child: _statBadge('${_sessions.length}', 'Sessions', Icons.videocam_outlined)),
                       const SizedBox(width: kS12),
-                      SizedBox(
-                        width: badgeWidth,
-                        child: _statBadge('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded),
-                      ),
+                      SizedBox(width: badgeWidth, child: _statBadge('${_avgScore.toInt()}%', 'Puntuació\nMitjana', Icons.bar_chart_rounded)),
                     ],
                   ),
                 ),

@@ -307,9 +307,10 @@ class _LoginScreenState extends State<LoginScreen>
 
         // ── Checkbox row ───────────────────────────────────
         const SizedBox(height: kS16),
-        if (_isSignIn)
-          _buildForgotPassword()
-        else
+        // TODO: Uncomment when backend supports password reset
+        // if (_isSignIn)
+        //   _buildForgotPassword()
+        if (!_isSignIn)
           _buildTermsCheckbox(),
 
         // ── Error ──────────────────────────────────────────
@@ -461,28 +462,28 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // FORGOT PASSWORD (sign-in)
+  // FORGOT PASSWORD (sign-in) — TODO: Uncomment when backend supports password reset
   // ══════════════════════════════════════════════════════════════════════════
 
-  Widget _buildForgotPassword() {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () {},
-          child: Text(
-            'Has oblidat la contrasenya?',
-            style: TextStyle(
-              fontFamily: kFontSans,
-              fontSize: 13,
-              color: context.colors.textTertiary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildForgotPassword() {
+  //   return Align(
+  //     alignment: Alignment.centerRight,
+  //     child: MouseRegion(
+  //       cursor: SystemMouseCursors.click,
+  //       child: GestureDetector(
+  //         onTap: () {},
+  //         child: Text(
+  //           'Has oblidat la contrasenya?',
+  //           style: TextStyle(
+  //             fontFamily: kFontSans,
+  //             fontSize: 13,
+  //             color: context.colors.textTertiary,
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   // ══════════════════════════════════════════════════════════════════════════
   // TERMS CHECKBOX (sign-up)
