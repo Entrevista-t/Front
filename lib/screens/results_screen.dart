@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_section_header.dart';
+import '../widgets/dot_grid_background.dart';
 
 class ResultsScreen extends StatefulWidget {
   final String sessionId;
@@ -80,7 +81,36 @@ class _ResultsScreenState extends State<ResultsScreen>
 
   Future<void> _load() async {
     try {
-      final r = await ApiService.getResults(widget.sessionId);
+      var r = await ApiService.getResults(widget.sessionId);
+      // Fetch question text from interview detail
+      try {
+        final interview = await ApiService.getInterviewById(widget.sessionId);
+        if (interview.questionId != null) {
+          final qText = await ApiService.getQuestionText(interview.questionId!);
+          if (qText != null) {
+            r = InterviewResult(
+              interviewId: r.interviewId,
+              status: r.status,
+              transcript: r.transcript,
+              questionText: qText,
+              durationTotal: r.durationTotal,
+              activeSpeechTime: r.activeSpeechTime,
+              confidenceIndex: r.confidenceIndex,
+              communicationRhythmWpm: r.communicationRhythmWpm,
+              questionAlignment: r.questionAlignment,
+              discourseCoherence: r.discourseCoherence,
+              informationDensity: r.informationDensity,
+              specificityIndex: r.specificityIndex,
+              lexicalRichness: r.lexicalRichness,
+              emotionDistribution: r.emotionDistribution,
+              dominantEmotion: r.dominantEmotion,
+              emotionalConsistency: r.emotionalConsistency,
+            );
+          }
+        }
+      } catch (_) {
+        // Silently ignore question fetch errors
+      }
       setState(() { _result = r; });
     } catch (e) {
       setState(() { _error = e.toString().replaceAll('Exception: ', ''); });
@@ -124,7 +154,7 @@ class _ResultsScreenState extends State<ResultsScreen>
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.home_rounded),
-            onPressed: () => context.go('/home'),
+            onPressed: () => context.go('/profile'),
           ),
           title: const Text('Informe'),
         ),
@@ -160,9 +190,9 @@ class _ResultsScreenState extends State<ResultsScreen>
                 ),
                 const SizedBox(height: kS12),
                 TextButton.icon(
-                  onPressed: () => context.go('/home'),
-                  icon: const Icon(Icons.home_rounded, size: 20),
-                  label: const Text("Tornar a l'inici"),
+                  onPressed: () => context.go('/profile'),
+                  icon: const Icon(Icons.person_rounded, size: 20),
+                  label: const Text('Tornar al perfil'),
                 ),
               ],
             ),
@@ -176,31 +206,38 @@ class _ResultsScreenState extends State<ResultsScreen>
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.home_rounded),
-          onPressed: () => context.go('/home'),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/profile'),
         ),
         title: const Text('Informe'),
         actions: const [],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(kPagePadding),
-        children: [
-          _entrance(0, _buildCategoryHeader(r)),
-          const SizedBox(height: kS24),
-          _entrance(1, _buildPerformanceRow(r)),
-          const SizedBox(height: kS16),
-          _entrance(2, _buildTranscript(r)),
-          const SizedBox(height: kS16),
-          _entrance(3, _buildDetailCards(r)),
-          const SizedBox(height: kS16),
-          _entrance(4, _buildReportsList(r)),
-          const SizedBox(height: kS24),
-          _entrance(5, ElevatedButton(
-            onPressed: () => context.go('/home'),
-            child: const Text('Nova simulació'),
-          )),
-          const SizedBox(height: kS8),
-        ],
+      body: DotGridBackground(
+        child: Center(
+          child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: ListView(
+            padding: const EdgeInsets.all(kPagePadding),
+            children: [
+              _entrance(0, _buildCategoryHeader(r)),
+              const SizedBox(height: kS24),
+              _entrance(1, _buildPerformanceRow(r)),
+              const SizedBox(height: kS16),
+              _entrance(2, _buildTranscript(r)),
+              const SizedBox(height: kS16),
+              _entrance(3, _buildDetailCards(r)),
+              const SizedBox(height: kS16),
+              _entrance(4, _buildReportsList(r)),
+              const SizedBox(height: kS24),
+              _entrance(5, ElevatedButton(
+                onPressed: () => context.go('/home'),
+                child: const Text('Nova simulació'),
+              )),
+              const SizedBox(height: kS8),
+            ],
+          ),
+        ),
+      ),
       ),
     );
   }
@@ -210,7 +247,20 @@ class _ResultsScreenState extends State<ResultsScreen>
     final curved = CurvedAnimation(parent: _scoreCtrl, curve: Curves.easeOutCubic);
     final tween = Tween<double>(begin: 0, end: r.overallScore / 100);
 
-    return AnimatedBuilder(
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: kS24),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(kRadiusLg),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            kAccent.withValues(alpha: 0.03),
+            Colors.transparent,
+          ],
+        ),
+      ),
+      child: AnimatedBuilder(
       animation: curved,
       builder: (context, child) {
         final animValue = tween.evaluate(curved);
@@ -256,51 +306,65 @@ class _ResultsScreenState extends State<ResultsScreen>
           ),
         );
       },
+    ),
     );
   }
 
   Widget _buildPerformanceRow(InterviewResult r) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 600;
-        final rendiment = _buildRendimentCard(r);
-        final punts = _buildStrengthsBars(r);
-        if (wide) {
-          return IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: rendiment),
-                const SizedBox(width: kS16),
-                Expanded(child: punts),
-              ],
-            ),
-          );
-        }
-        return Column(children: [
-          rendiment,
-          const SizedBox(height: kS16),
-          punts,
-        ]);
-      },
-    );
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Content width mirrors the ConstrainedBox(maxWidth:900) + ListView padding
+    final contentWidth = screenWidth.clamp(0.0, 900.0) - kPagePadding * 2;
+    final wide = contentWidth >= 600;
+    final cardInnerWidth = wide
+        ? (contentWidth - kS16) / 2 - kS24 * 2 - 2 // -2 for AppCard border
+        : contentWidth - kS24 * 2 - 2;
+    final circleSize = ((cardInnerWidth - kS8 * 6) / 3).clamp(60.0, 130.0);
+    final rendiment = _buildRendimentCard(r, circleSize, stretched: wide);
+    final punts = _buildStrengthsBars(r);
+    if (wide) {
+      return IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: rendiment),
+            const SizedBox(width: kS16),
+            Expanded(child: punts),
+          ],
+        ),
+      );
+    }
+    return Column(children: [
+      rendiment,
+      const SizedBox(height: kS16),
+      punts,
+    ]);
   }
 
-  Widget _buildRendimentCard(InterviewResult r) {
+  Widget _buildRendimentCard(InterviewResult r, double circleSize, {bool stretched = false}) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(title: 'Rendiment'),
-          const SizedBox(height: kS24),
+          if (stretched) const Spacer() else const SizedBox(height: kS24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _circleScore('Contingut', r.contentScore),
-              _circleScore('Fluïdesa', r.fluencyScore),
-              _circleScore('Seguretat', r.confidenceScore),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: kS8),
+                child: _circleScore('Contingut', r.contentScore, circleSize),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: kS8),
+                child: _circleScore('Fluïdesa', r.fluencyScore, circleSize),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: kS8),
+                child: _circleScore('Seguretat', r.confidenceScore, circleSize),
+              ),
             ],
           ),
+          if (stretched) const Spacer() else const SizedBox(height: kS8),
         ],
       ),
     );
@@ -367,13 +431,15 @@ class _ResultsScreenState extends State<ResultsScreen>
     );
   }
 
-  Widget _circleScore(String label, double value) {
+  Widget _circleScore(String label, double value, double size) {
     final color = scoreColor(value);
     final curved = CurvedAnimation(
       parent: _scoreCtrl,
       curve: Curves.easeOutCubic,
     );
     final tween = Tween<double>(begin: 0, end: value / 100);
+    final strokeWidth = (size * 0.077).clamp(4.0, 10.0);
+    final fontSize = size < 80 ? Theme.of(context).textTheme.titleMedium : Theme.of(context).textTheme.titleLarge;
 
     return AnimatedBuilder(
       animation: curved,
@@ -382,15 +448,15 @@ class _ResultsScreenState extends State<ResultsScreen>
         return Column(
           children: [
             SizedBox(
-              width: 130, height: 130,
+              width: size, height: size,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   SizedBox(
-                    width: 130, height: 130,
+                    width: size, height: size,
                     child: CircularProgressIndicator(
                       value: animValue,
-                      strokeWidth: 10,
+                      strokeWidth: strokeWidth,
                       backgroundColor: context.colors.borderSubtle,
                       valueColor: AlwaysStoppedAnimation(color),
                       strokeCap: StrokeCap.round,
@@ -398,7 +464,7 @@ class _ResultsScreenState extends State<ResultsScreen>
                   ),
                   Text(
                     '${(animValue * 100).toInt()}%',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: fontSize,
                   ),
                 ],
               ),
@@ -433,6 +499,35 @@ class _ResultsScreenState extends State<ResultsScreen>
               const SizedBox(width: kS8),
               AppSectionHeader(title: 'Transcripció'),
             ]),
+            if (r.questionText != null) ...[
+              const SizedBox(height: kS16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(kS12),
+                decoration: BoxDecoration(
+                  color: kAccent.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(kRadiusSm),
+                  border: Border.all(color: kAccent.withValues(alpha: 0.15)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.help_outline_rounded, color: kAccent, size: 16),
+                    const SizedBox(width: kS8),
+                    Expanded(
+                      child: Text(
+                        r.questionText!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: kAccent,
+                          fontWeight: FontWeight.w500,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: kS12),
             Text(
               r.transcript ?? 'No disponible',
@@ -467,6 +562,7 @@ class _ResultsScreenState extends State<ResultsScreen>
         color: context.colors.bgSurface,
         borderRadius: BorderRadius.circular(kRadiusMd),
         border: Border.all(color: context.colors.borderSubtle),
+        boxShadow: kShadowSm,
       ),
       child: Column(
         children: [
