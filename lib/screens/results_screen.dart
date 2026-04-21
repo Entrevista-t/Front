@@ -319,7 +319,7 @@ class _ResultsScreenState extends State<ResultsScreen>
         ? (contentWidth - kS16) / 2 - kS24 * 2 - 2 // -2 for AppCard border
         : contentWidth - kS24 * 2 - 2;
     final circleSize = ((cardInnerWidth - kS8 * 6) / 3).clamp(60.0, 130.0);
-    final rendiment = _buildRendimentCard(r, circleSize);
+    final rendiment = _buildRendimentCard(r, circleSize, stretched: wide);
     final punts = _buildStrengthsBars(r);
     if (wide) {
       return IntrinsicHeight(
@@ -340,13 +340,13 @@ class _ResultsScreenState extends State<ResultsScreen>
     ]);
   }
 
-  Widget _buildRendimentCard(InterviewResult r, double circleSize) {
+  Widget _buildRendimentCard(InterviewResult r, double circleSize, {bool stretched = false}) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(title: 'Rendiment'),
-          const Spacer(),
+          if (stretched) const Spacer() else const SizedBox(height: kS24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -364,7 +364,7 @@ class _ResultsScreenState extends State<ResultsScreen>
               ),
             ],
           ),
-          const Spacer(),
+          if (stretched) const Spacer() else const SizedBox(height: kS8),
         ],
       ),
     );
