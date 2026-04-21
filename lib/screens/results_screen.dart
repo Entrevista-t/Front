@@ -318,7 +318,8 @@ class _ResultsScreenState extends State<ResultsScreen>
         final cardInnerWidth = wide
             ? (constraints.maxWidth - kS16) / 2 - kS24 * 2
             : constraints.maxWidth - kS24 * 2;
-        final circleSize = ((cardInnerWidth - kS16 * 2) / 3).clamp(60.0, 130.0);
+        // Subtract extra horizontal margin per circle (kS8 each side × 3)
+        final circleSize = ((cardInnerWidth - kS8 * 6) / 3).clamp(60.0, 130.0);
         final rendiment = _buildRendimentCard(r, circleSize);
         final punts = _buildStrengthsBars(r);
         if (wide) {
@@ -352,9 +353,18 @@ class _ResultsScreenState extends State<ResultsScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _circleScore('Contingut', r.contentScore, circleSize),
-              _circleScore('Fluïdesa', r.fluencyScore, circleSize),
-              _circleScore('Seguretat', r.confidenceScore, circleSize),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: kS8),
+                child: _circleScore('Contingut', r.contentScore, circleSize),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: kS8),
+                child: _circleScore('Fluïdesa', r.fluencyScore, circleSize),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: kS8),
+                child: _circleScore('Seguretat', r.confidenceScore, circleSize),
+              ),
             ],
           ),
           const Spacer(),
