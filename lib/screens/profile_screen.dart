@@ -96,9 +96,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(kPagePadding),
-              children: [
+          : Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: ListView(
+                  padding: const EdgeInsets.all(kPagePadding),
+                  children: [
                 _buildUserCard(),
                 const SizedBox(height: kS32),
                 AppSectionHeader(title: 'Informes passats'),
@@ -138,6 +141,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(height: kS24),
               ],
             ),
+          ),
+        ),
     );
   }
 

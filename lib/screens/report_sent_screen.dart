@@ -90,10 +90,13 @@ class _ReportSentScreenState extends State<ReportSentScreen>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: kS48),
-                ElevatedButton.icon(
-                  onPressed: () => context.go('/home'),
-                  icon: const Icon(Icons.home_rounded, size: 20),
-                  label: const Text("Tornar a l'inici"),
+                SizedBox(
+                  width: 220,
+                  child: ElevatedButton.icon(
+                    onPressed: () => context.go('/home'),
+                    icon: const Icon(Icons.home_rounded, size: 20),
+                    label: const Text("Tornar a l'inici"),
+                  ),
                 ),
               ],
             ),

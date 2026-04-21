@@ -307,9 +307,10 @@ class _LoginScreenState extends State<LoginScreen>
 
         // ── Checkbox row ───────────────────────────────────
         const SizedBox(height: kS16),
-        if (_isSignIn)
-          _buildForgotPassword()
-        else
+        // TODO: Uncomment when backend supports password reset
+        // if (_isSignIn)
+        //   _buildForgotPassword()
+        if (!_isSignIn)
           _buildTermsCheckbox(),
 
         // ── Error ──────────────────────────────────────────
