@@ -212,8 +212,9 @@ class _ResultsScreenState extends State<ResultsScreen>
         title: const Text('Informe'),
         actions: const [],
       ),
-      body: Center(
-        child: ConstrainedBox(
+      body: DotGridBackground(
+        child: Center(
+          child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 900),
           child: ListView(
             padding: const EdgeInsets.all(kPagePadding),
@@ -236,6 +237,7 @@ class _ResultsScreenState extends State<ResultsScreen>
             ],
           ),
         ),
+      ),
       ),
     );
   }
