@@ -224,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen>
               backgroundColor: context.colors.bgSurface,
               onRefresh: _load,
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: kS24),
+                padding: const EdgeInsets.symmetric(vertical: kS16),
                 children: [
                   // ── Welcome text (centered) ─────────────────────────
                   Padding(
@@ -252,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ]),
                   ),
 
-                  const SizedBox(height: kS24),
+                  const SizedBox(height: kS16),
 
                   // ── Search bar (centered, discrete) ─────────────────
                   Center(
@@ -282,21 +282,26 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
 
-                  const SizedBox(height: kS24),
+                  const SizedBox(height: kS16),
+
+                  // ── Stats row (above grid) ─────────────────────────
+                  if (_recentSessions.isNotEmpty) ...[
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+                          child: _buildStatsRow(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: kS16),
+                  ],
 
                   // ── Category cards (responsive mosaic grid) ──────────
                   _buildCategoryGrid(),
 
-                  const SizedBox(height: kS32),
-
-                  // ── Stats row ───────────────────────────────────────
-                  if (_recentSessions.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                      child: _buildStatsRow(),
-                    ),
-                    const SizedBox(height: kS24),
-                  ],
+                  const SizedBox(height: kS16),
 
                   // TODO: Uncomment when ready to show recent sessions
                   // ── Recent sessions ─────────────────────────────────
@@ -324,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen>
                   //     ),
                   //   ),
                   // ],
-                  const SizedBox(height: kS24),
+                  const SizedBox(height: kS12),
                 ],
               ),
             ),
@@ -549,8 +554,18 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildStatsRow() {
-    return GlassContainer(
-      padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS12),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            kAccent.withValues(alpha: 0.08),
+            kAccent.withValues(alpha: 0.02),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(kRadiusLg),
+        border: Border.all(color: kAccent.withValues(alpha: 0.2)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS16),
       child: Row(children: [
         const GlowIcon(
           icon: Icons.bar_chart_rounded,
@@ -558,19 +573,38 @@ class _HomeScreenState extends State<HomeScreen>
           iconSize: 20,
         ),
         const SizedBox(width: kS12),
-        Text('Puntuació Mitjana: ',
-            style: Theme.of(context).textTheme.bodySmall),
-        Text('${_averageScore.toInt()}%',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(color: kAccent)),
-        const SizedBox(width: kS8),
-        Text('·  ${_recentSessions.length} sessions',
-            style: Theme.of(context).textTheme.bodySmall),
-        const Spacer(),
-        GestureDetector(
-          onTap: () => context.go('/profile'),
-          child: Text('Veure historial',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: kAccent, fontWeight: FontWeight.w600)),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Puntuació Mitjana',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: context.colors.textSecondary,
+                  )),
+              const SizedBox(height: kS4),
+              Text('${_averageScore.toInt()}%',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: kAccent, fontWeight: FontWeight.bold,
+                  )),
+            ],
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text('${_recentSessions.length} sessions',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: context.colors.textSecondary,
+                )),
+            const SizedBox(height: kS4),
+            GestureDetector(
+              onTap: () => context.go('/profile'),
+              child: Text('Veure historial',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: kAccent, fontWeight: FontWeight.w600,
+                  )),
+            ),
+          ],
         ),
       ]),
     );
