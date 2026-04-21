@@ -22,6 +22,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _loading = true;
   String _name = 'Usuari';
   String _email = 'usuari@entrevistat.com';
+  String? _photoUrl;
 
   late final AnimationController _statsCtrl;
   late final AnimationController _listCtrl;
@@ -43,6 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       setState(() {
         _name = profile['nom'] as String? ?? 'Usuari';
         _email = profile['email'] as String? ?? '';
+        _photoUrl = profile['url_foto'] as String?;
       });
     } catch (_) {
       // Fall back to cached values
@@ -167,7 +169,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                 CircleAvatar(
                   radius: 36,
                   backgroundColor: kAccent.withValues(alpha: 0.08),
-                  child: const Icon(Icons.person, color: kAccent, size: 38),
+                  backgroundImage: _photoUrl != null
+                      ? NetworkImage('${ApiService.baseUrl}$_photoUrl')
+                      : null,
+                  child: _photoUrl == null
+                      ? const Icon(Icons.person, color: kAccent, size: 38)
+                      : null,
                 ),
                 const SizedBox(width: kS16),
                 Expanded(

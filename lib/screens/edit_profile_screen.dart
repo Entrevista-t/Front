@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -19,6 +20,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _saved = false;
   bool _hoverSave = false;
   bool _hoverCamera = false;
+  String? _photoUrl;
 
   @override
   void initState() {
@@ -31,10 +33,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final profile = await ApiService.getUserProfile();
       _nameController.text = profile['nom'] as String? ?? '';
       _emailController.text = profile['email'] as String? ?? '';
+      _photoUrl = profile['url_foto'] as String?;
     } catch (_) {
       final prefs = await SharedPreferences.getInstance();
       _nameController.text = prefs.getString('user_name') ?? '';
       _emailController.text = prefs.getString('user_email') ?? '';
+      _photoUrl = prefs.getString('user_photo_url');
     }
     setState(() {});
   }
@@ -67,6 +71,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _pickAndUploadPhoto() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      if (file.bytes == null) return;
+      setState(() { _loading = true; });
+      final data = await ApiService.uploadProfilePicture(
+        file.bytes!.toList(),
+        file.name,
+      );
+      setState(() {
+        _photoUrl = data['url_foto'] as String?;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() { _loading = false; });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,26 +120,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 CircleAvatar(
                   radius: 52,
                   backgroundColor: kAccent.withValues(alpha: 0.08),
-                  child: const Icon(Icons.person, color: kAccent, size: 56),
+                  backgroundImage: _photoUrl != null
+                      ? NetworkImage('${ApiService.baseUrl}$_photoUrl')
+                      : null,
+                  child: _photoUrl == null
+                      ? const Icon(Icons.person, color: kAccent, size: 56)
+                      : null,
                 ),
                 Positioned(
                   bottom: 0, right: 0,
-                  child: MouseRegion(
-                    onEnter: (_) => setState(() => _hoverCamera = true),
-                    onExit: (_) => setState(() => _hoverCamera = false),
-                    cursor: SystemMouseCursors.click,
-                    child: AnimatedScale(
-                      scale: _hoverCamera ? 1.15 : 1.0,
-                      duration: kDurationFast,
-                      curve: kCurveHover,
-                      child: Container(
-                        width: 32, height: 32,
-                        decoration: BoxDecoration(
-                          color: kAccent,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: context.colors.bgBase, width: 2),
+                  child: GestureDetector(
+                    onTap: _pickAndUploadPhoto,
+                    child: MouseRegion(
+                      onEnter: (_) => setState(() => _hoverCamera = true),
+                      onExit: (_) => setState(() => _hoverCamera = false),
+                      cursor: SystemMouseCursors.click,
+                      child: AnimatedScale(
+                        scale: _hoverCamera ? 1.15 : 1.0,
+                        duration: kDurationFast,
+                        curve: kCurveHover,
+                        child: Container(
+                          width: 32, height: 32,
+                          decoration: BoxDecoration(
+                            color: kAccent,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: context.colors.bgBase, width: 2),
+                          ),
+                          child: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 16),
                         ),
-                        child: const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 16),
                       ),
                     ),
                   ),

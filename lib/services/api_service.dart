@@ -16,6 +16,7 @@ class ApiService {
   static String? _userName;
   static String? _userEmail;
   static String? _userCreatedAt;
+  static String? _userPhotoUrl;
 
   // ── Dev bypass ──────────────────────────────────────────────────────────────
 
@@ -40,6 +41,8 @@ class ApiService {
   static String? get userName => _userName;
   static String? get userEmail => _userEmail;
   static int? get userId => _userId;
+  static String? get userPhotoUrl => _userPhotoUrl;
+  static String get baseUrl => _baseUrl;
 
   // ── Token / header helpers ─────────────────────────────────────────────────
 
@@ -51,6 +54,7 @@ class ApiService {
     _userName = prefs.getString('user_name');
     _userEmail = prefs.getString('user_email');
     _userCreatedAt = prefs.getString('user_created_at');
+    _userPhotoUrl = prefs.getString('user_photo_url');
   }
 
   static Map<String, String> get _jsonAuthHeaders => {
@@ -101,12 +105,14 @@ class ApiService {
     _userName = null;
     _userEmail = null;
     _userCreatedAt = null;
+    _userPhotoUrl = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('user_id');
     await prefs.remove('user_name');
     await prefs.remove('user_email');
     await prefs.remove('user_created_at');
+    await prefs.remove('user_photo_url');
   }
 
   static Future<bool> isLoggedIn() async {
@@ -127,11 +133,13 @@ class ApiService {
       _userName = data['nom'] as String?;
       _userEmail = data['email'] as String?;
       _userCreatedAt = data['data_creacio'] as String?;
+      _userPhotoUrl = data['url_foto'] as String?;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('user_id', _userId!);
       if (_userName != null) await prefs.setString('user_name', _userName!);
       if (_userEmail != null) await prefs.setString('user_email', _userEmail!);
       if (_userCreatedAt != null) await prefs.setString('user_created_at', _userCreatedAt!);
+      if (_userPhotoUrl != null) await prefs.setString('user_photo_url', _userPhotoUrl!);
     }
   }
 
@@ -147,6 +155,7 @@ class ApiService {
       _userName = data['nom'] as String?;
       _userEmail = data['email'] as String?;
       _userCreatedAt = data['data_creacio'] as String?;
+      _userPhotoUrl = data['url_foto'] as String?;
       return data;
     }
     await _guard(res);
@@ -180,6 +189,40 @@ class ApiService {
     }
     await _guard(res);
     throw Exception('Error actualitzant el perfil');
+  }
+
+  static Future<Map<String, dynamic>> uploadProfilePicture(
+    List<int> bytes,
+    String filename,
+  ) async {
+    await _loadToken();
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$_baseUrl/usuarios/me/foto'),
+    );
+    request.headers['Authorization'] = 'Bearer $_token';
+    final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : 'jpg';
+    final mimeSubtype = ext == 'png' ? 'png' : ext == 'webp' ? 'webp' : ext == 'gif' ? 'gif' : 'jpeg';
+    request.files.add(http.MultipartFile.fromBytes(
+      'foto',
+      bytes,
+      filename: filename,
+      contentType: MediaType('image', mimeSubtype),
+    ));
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      // Cache updated photo URL
+      final prefs = await SharedPreferences.getInstance();
+      if (data['url_foto'] != null) {
+        _userPhotoUrl = data['url_foto'] as String?;
+        await prefs.setString('user_photo_url', data['url_foto']);
+      }
+      return data;
+    }
+    await _guard(res);
+    throw Exception('Error pujant la foto de perfil');
   }
 
   static Future<void> deleteAccount() async {
@@ -379,6 +422,25 @@ class ApiService {
       throw Exception('Error obtenint resultats (${res.statusCode})');
     }
     throw Exception("Temps d'espera esgotat. L'analisi encara s'esta processant.");
+  }
+
+  /// Fetches the text of a single question by its ID.
+  /// Loads all questions and filters locally (no single-question endpoint).
+  static Future<String?> getQuestionText(int questionId) async {
+    await _loadToken();
+    final res = await http.get(
+      Uri.parse('$_baseUrl/preguntas'),
+      headers: _jsonAuthHeaders,
+    );
+    if (res.statusCode == 200) {
+      final list = jsonDecode(res.body) as List;
+      for (final q in list) {
+        if (q['id'] == questionId) {
+          return q['text_pregunta'] as String?;
+        }
+      }
+    }
+    return null;
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
