@@ -54,5 +54,5 @@ jobs:
           script: |
             set -e
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
-            docker service update --image "${{ steps.meta.outputs.image }}" "${{ vars.SERVICE_NAME }}"
+            docker service update --with-registry-auth --image "${{ steps.meta.outputs.image }}" "${{ vars.SERVICE_NAME }}"
             docker service inspect "${{ vars.SERVICE_NAME }}" --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'
