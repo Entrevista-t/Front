@@ -106,6 +106,7 @@ class _ResultsScreenState extends State<ResultsScreen>
               dominantEmotion: r.dominantEmotion,
               emotionalConsistency: r.emotionalConsistency,
               llmFeedback: r.llmFeedback,
+              answerQualityScore: r.answerQualityScore,
             );
           }
         }
@@ -482,6 +483,8 @@ class _ResultsScreenState extends State<ResultsScreen>
 
   Widget _buildLlmFeedback(InterviewResult r) {
     final radius = BorderRadius.circular(kRadiusMd);
+    final qualityPct = ((r.answerQualityScore ?? 0) * 100).clamp(0.0, 100.0);
+    final qualityColor = scoreColor(qualityPct);
     return Container(
       decoration: BoxDecoration(
         gradient: context.colors.gradientCardBorder,
@@ -500,8 +503,34 @@ class _ResultsScreenState extends State<ResultsScreen>
             Row(children: [
               const Icon(Icons.auto_awesome_rounded, color: kAccent, size: 18),
               const SizedBox(width: kS8),
-              AppSectionHeader(title: 'Feedback de la IA'),
+              AppSectionHeader(title: 'Feedback'),
             ]),
+            const SizedBox(height: kS16),
+            // Answer quality score indicator
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: kS12, vertical: kS8),
+              decoration: BoxDecoration(
+                color: qualityColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(kRadiusSm),
+                border: Border.all(color: qualityColor.withValues(alpha: 0.20)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.verified_rounded, size: 16, color: qualityColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Qualitat de la resposta: ${qualityPct.toInt()}%',
+                    style: TextStyle(
+                      fontFamily: 'Satoshi',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: qualityColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: kS12),
             Text(
               r.llmFeedback ?? 'Feedback no disponible',

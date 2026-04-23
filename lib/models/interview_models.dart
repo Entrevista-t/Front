@@ -173,6 +173,7 @@ class InterviewResult {
   final double? emotionalConsistency;
 
   final String? llmFeedback;
+  final double? answerQualityScore;
 
   InterviewResult({
     required this.interviewId,
@@ -192,6 +193,7 @@ class InterviewResult {
     this.dominantEmotion,
     this.emotionalConsistency,
     this.llmFeedback,
+    this.answerQualityScore,
   });
 
   // ── Derived scores (client-side heuristics, 0-100) ──
@@ -283,6 +285,7 @@ class InterviewResult {
       dominantEmotion: video['dominant_emotion'] as String?,
       emotionalConsistency: (video['emotional_stability'] as num?)?.toDouble(),
       llmFeedback: metriques['llm_feedback'] as String?,
+      answerQualityScore: (metriques['answer_quality_score'] as num?)?.toDouble(),
     );
   }
 
@@ -309,5 +312,6 @@ class InterviewResult {
             "Per millorar, podries estructurar millor la teva resposta seguint "
             "el mètode STAR (Situació, Tasca, Acció, Resultat) i reduir les "
             "pauses llargues entre idees.",
+        answerQualityScore: 0.72,
       );
 }
