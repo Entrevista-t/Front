@@ -220,178 +220,20 @@ class _InterviewScreenState extends State<InterviewScreen>
     if (_error != null) return _buildError();
 
     final question = _question ?? Question.fallback().first;
-    final isMobile = MediaQuery.of(context).size.width < 600;
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 600;
+    final isLandscapePhone = size.width > size.height && size.height < 500;
 
     return Scaffold(
       body: DotGridBackground(
         child: SafeArea(
           child: Stack(
             children: [
-              Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: kS48),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // ── Question (large, no card) ─────────────────────────
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 700),
-                          child: Text(
-                            question.text,
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontFamily: kFontSans,
-                              fontWeight: FontWeight.w600,
-                              fontStyle: FontStyle.normal,
-                              fontSize: isMobile ? 22 : 38,
-                              height: 1.25,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
+              isLandscapePhone
+                  ? _buildLandscapeLayout(question)
+                  : _buildPortraitLayout(question, isMobile),
 
-                      const SizedBox(height: kS16),
-
-                      // ── Tutorial button (always visible) ──────────────────
-                      Center(
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: _openOnboarding,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: kS16, vertical: kS8),
-                              decoration: BoxDecoration(
-                                color: kAccent.withValues(alpha: 0.10),
-                                borderRadius:
-                                    BorderRadius.circular(kRadiusFull),
-                                border: Border.all(
-                                  color: kAccent.withValues(alpha: 0.25),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.help_outline_rounded,
-                                      size: 16, color: kAccent),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Com funciona?',
-                                    style: TextStyle(
-                                      fontFamily: 'Satoshi',
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: kAccent,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: kS16),
-
-                      // ── Camera preview (clean, static border) ─────────────
-                      Center(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: isMobile ? 220 : 560,
-                            maxHeight: isMobile ? 320 : double.infinity,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(kRadiusMd + 3),
-                                border: Border.all(
-                                  color: context.colors.borderSubtle,
-                                ),
-                              ),
-                              child: AspectRatio(
-                                aspectRatio: isMobile ? 9 / 16 : 16 / 9,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(kRadiusMd),
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      Container(
-                                        color: context.colors.bgElevated,
-                                        child: (_camera != null && _camera!.value.isInitialized)
-                                            ? CameraPreview(_camera!)
-                                            : _buildNoCameraPlaceholder(),
-                                      ),
-                                      if (_cameras.length > 1)
-                                        Positioned(
-                                          top: 8,
-                                          right: 8,
-                                          child: Material(
-                                            color: Colors.transparent,
-                                            child: InkWell(
-                                              onTap: _recording ? null : _switchCamera,
-                                              customBorder: const CircleBorder(),
-                                              child: Container(
-                                                width: 36,
-                                                height: 36,
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  color: Colors.black.withValues(alpha: 0.45),
-                                                ),
-                                                child: Icon(
-                                                  Icons.cameraswitch_rounded,
-                                                  size: 18,
-                                                  color: _recording
-                                                      ? Colors.white.withValues(alpha: 0.3)
-                                                      : Colors.white.withValues(alpha: 0.9),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: kS8),
-
-                      // ── Progress bar (60s, always reserves space) ─────
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 560),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(kRadiusMd),
-                            child: Opacity(
-                              opacity: _recording ? 1.0 : 0.0,
-                              child: LinearProgressIndicator(
-                                value: (_elapsed.inSeconds / 60).clamp(0.0, 1.0),
-                                minHeight: 4,
-                                color: kAccent,
-                                backgroundColor: context.colors.borderSubtle,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: kS16),
-
-                      // ── Record / Stop button ──────────────────────────────
-                      Center(child: _buildRecordButton()),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ── Close button (top-left) ───────────────────────────────
+              // Close button (top-left)
               Positioned(
                 top: 8,
                 left: 8,
@@ -415,6 +257,284 @@ class _InterviewScreenState extends State<InterviewScreen>
       ),
     );
   }
+
+  // ── Landscape phone layout (side-by-side) ──────────────────────
+  Widget _buildLandscapeLayout(Question question) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: kS24, vertical: kS8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Left column: question + tutorial
+          Expanded(
+            flex: 5,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  question.text,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontFamily: kFontSans,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                    height: 1.25,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: kS8),
+                _buildTutorialButton(),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: kS16),
+
+          // Right column: camera + progress + record
+          Expanded(
+            flex: 4,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildCameraPreview(maxWidth: 280, maxHeight: 180, aspectRatio: 4 / 3),
+                const SizedBox(height: 4),
+                _buildProgressBar(maxWidth: 280),
+                const SizedBox(height: 6),
+                _buildCompactRecordButton(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Portrait / desktop layout (vertical stack) ─────────────────
+  Widget _buildPortraitLayout(Question question, bool isMobile) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(vertical: kS48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Question
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: Text(
+                  question.text,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontFamily: kFontSans,
+                    fontWeight: FontWeight.w600,
+                    fontStyle: FontStyle.normal,
+                    fontSize: isMobile ? 22 : 38,
+                    height: 1.25,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: kS16),
+
+            // Tutorial button
+            _buildTutorialButton(),
+
+            const SizedBox(height: kS16),
+
+            // Camera preview
+            _buildCameraPreview(
+              maxWidth: isMobile ? 220 : 560,
+              maxHeight: isMobile ? 320 : double.infinity,
+              aspectRatio: isMobile ? 9 / 16 : 16 / 9,
+            ),
+
+            const SizedBox(height: kS8),
+
+            // Progress bar
+            _buildProgressBar(maxWidth: 560),
+
+            const SizedBox(height: kS16),
+
+            // Record button
+            Center(child: _buildRecordButton()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Shared helpers ─────────────────────────────────────────────
+
+  Widget _buildTutorialButton() {
+    return Center(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: _openOnboarding,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: kS16, vertical: kS8),
+            decoration: BoxDecoration(
+              color: kAccent.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(kRadiusFull),
+              border: Border.all(color: kAccent.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.help_outline_rounded, size: 16, color: kAccent),
+                const SizedBox(width: 6),
+                Text(
+                  'Com funciona?',
+                  style: TextStyle(
+                    fontFamily: 'Satoshi',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: kAccent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCameraPreview({
+    required double maxWidth,
+    required double maxHeight,
+    required double aspectRatio,
+  }) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(kRadiusMd + 3),
+              border: Border.all(color: context.colors.borderSubtle),
+            ),
+            child: AspectRatio(
+              aspectRatio: aspectRatio,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(kRadiusMd),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(
+                      color: context.colors.bgElevated,
+                      child: (_camera != null && _camera!.value.isInitialized)
+                          ? CameraPreview(_camera!)
+                          : _buildNoCameraPlaceholder(),
+                    ),
+                    if (_cameras.length > 1)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _recording ? null : _switchCamera,
+                            customBorder: const CircleBorder(),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black.withValues(alpha: 0.45),
+                              ),
+                              child: Icon(
+                                Icons.cameraswitch_rounded,
+                                size: 18,
+                                color: _recording
+                                    ? Colors.white.withValues(alpha: 0.3)
+                                    : Colors.white.withValues(alpha: 0.9),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressBar({required double maxWidth}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(kRadiusMd),
+          child: Opacity(
+            opacity: _recording ? 1.0 : 0.0,
+            child: LinearProgressIndicator(
+              value: (_elapsed.inSeconds / 60).clamp(0.0, 1.0),
+              minHeight: 4,
+              color: kAccent,
+              backgroundColor: context.colors.borderSubtle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactRecordButton() {
+    return _recording ? _buildCompactStopBtn() : _buildCompactIdleBtn();
+  }
+
+  Widget _buildCompactStopBtn() {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: _stopAndSubmit,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEF4444),
+            borderRadius: BorderRadius.circular(kRadiusFull),
+            boxShadow: [BoxShadow(color: const Color(0xFFEF4444).withValues(alpha: 0.3), blurRadius: 10, spreadRadius: 1)],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.stop_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 6),
+              Text('Enviar', style: TextStyle(fontFamily: 'Satoshi', fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactIdleBtn() {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: _startRecording,
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: kAccent,
+            boxShadow: [BoxShadow(color: kAccent.withValues(alpha: 0.25), blurRadius: 12, spreadRadius: 1)],
+          ),
+          child: const Icon(Icons.fiber_manual_record, color: Colors.white, size: 24),
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildRecordButton() {
     // Fixed height prevents layout shift when switching states
