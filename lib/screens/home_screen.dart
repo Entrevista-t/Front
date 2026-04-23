@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart' show EntrevistatApp;
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart' show kFontSans;
+import '../widgets/home_onboarding_dialog.dart';
 // TODO: Uncomment when recent sessions section is re-enabled
 // import '../widgets/app_section_header.dart';
 import '../widgets/dot_grid_background.dart';
@@ -159,6 +161,16 @@ class _HomeScreenState extends State<HomeScreen>
         _loading = false;
       });
       _restartEntrance(_filteredCategories.length);
+      _checkOnboarding();
+    }
+  }
+
+  Future<void> _checkOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    final shown = prefs.getBool('home_onboarding_shown') ?? false;
+    if (!shown && mounted) {
+      await showHomeOnboardingDialog(context);
+      await prefs.setBool('home_onboarding_shown', true);
     }
   }
 
@@ -202,6 +214,11 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded),
+            tooltip: 'Tutorial',
+            onPressed: () => showHomeOnboardingDialog(context),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: kS12),
             child: _ProfileMenuButton(

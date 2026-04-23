@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../widgets/app_section_header.dart';
 import '../widgets/app_empty_state.dart';
+import '../widgets/dot_grid_background.dart';
 import '../widgets/session_tile.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -82,7 +83,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.colors.bgBase,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/home'),
@@ -98,12 +103,15 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 900),
-                child: ListView(
-                  padding: const EdgeInsets.all(kPagePadding),
-                  children: [
+          : DotGridBackground(
+              showGlows: true,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: ListView(
+                    padding: const EdgeInsets.all(kPagePadding),
+                    children: [
+                SizedBox(height: MediaQuery.of(context).padding.top + kToolbarHeight + kS16),
                 _buildUserCard(),
                 const SizedBox(height: kS32),
                 AppSectionHeader(title: 'Informes passats'),
@@ -145,6 +153,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
         ),
+      ),
     );
   }
 

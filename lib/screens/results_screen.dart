@@ -18,7 +18,7 @@ class ResultsScreen extends StatefulWidget {
 }
 
 /// Total number of staggered sections for entrance animation.
-const _sectionCount = 6;
+const _sectionCount = 7;
 
 class _ResultsScreenState extends State<ResultsScreen>
     with TickerProviderStateMixin {
@@ -105,6 +105,7 @@ class _ResultsScreenState extends State<ResultsScreen>
               emotionDistribution: r.emotionDistribution,
               dominantEmotion: r.dominantEmotion,
               emotionalConsistency: r.emotionalConsistency,
+              llmFeedback: r.llmFeedback,
             );
           }
         }
@@ -221,15 +222,17 @@ class _ResultsScreenState extends State<ResultsScreen>
             children: [
               _entrance(0, _buildCategoryHeader(r)),
               const SizedBox(height: kS24),
-              _entrance(1, _buildPerformanceRow(r)),
+              _entrance(1, _buildLlmFeedback(r)),
               const SizedBox(height: kS16),
-              _entrance(2, _buildTranscript(r)),
+              _entrance(2, _buildPerformanceRow(r)),
               const SizedBox(height: kS16),
-              _entrance(3, _buildDetailCards(r)),
+              _entrance(3, _buildTranscript(r)),
               const SizedBox(height: kS16),
-              _entrance(4, _buildReportsList(r)),
+              _entrance(4, _buildDetailCards(r)),
+              const SizedBox(height: kS16),
+              _entrance(5, _buildReportsList(r)),
               const SizedBox(height: kS24),
-              _entrance(5, ElevatedButton(
+              _entrance(6, ElevatedButton(
                 onPressed: () => context.go('/home'),
                 child: const Text('Nova simulació'),
               )),
@@ -474,6 +477,41 @@ class _ResultsScreenState extends State<ResultsScreen>
           ],
         );
       },
+    );
+  }
+
+  Widget _buildLlmFeedback(InterviewResult r) {
+    final radius = BorderRadius.circular(kRadiusMd);
+    return Container(
+      decoration: BoxDecoration(
+        gradient: context.colors.gradientCardBorder,
+        borderRadius: radius,
+      ),
+      child: Container(
+        margin: const EdgeInsets.all(1),
+        padding: const EdgeInsets.all(kS24),
+        decoration: BoxDecoration(
+          color: context.colors.bgSurface,
+          borderRadius: radius,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              const Icon(Icons.auto_awesome_rounded, color: kAccent, size: 18),
+              const SizedBox(width: kS8),
+              AppSectionHeader(title: 'Feedback de la IA'),
+            ]),
+            const SizedBox(height: kS12),
+            Text(
+              r.llmFeedback ?? 'Feedback no disponible',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: context.colors.textSecondary, height: 1.6,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
