@@ -172,6 +172,9 @@ class InterviewResult {
   final String? dominantEmotion;
   final double? emotionalConsistency;
 
+  final String? llmFeedback;
+  final double? answerQualityScore;
+
   InterviewResult({
     required this.interviewId,
     required this.status,
@@ -189,6 +192,8 @@ class InterviewResult {
     this.emotionDistribution,
     this.dominantEmotion,
     this.emotionalConsistency,
+    this.llmFeedback,
+    this.answerQualityScore,
   });
 
   // ── Derived scores (client-side heuristics, 0-100) ──
@@ -213,9 +218,19 @@ class InterviewResult {
 
   double get structureScore => (discourseCoherence ?? 0) * 100;
   double get lexicalScore => (lexicalRichness ?? 0) * 100;
+  double get answerQualityPercent => (answerQualityScore ?? 0) * 100;
+  double get emotionalConsistencyScore => (emotionalConsistency ?? 0) * 100;
 
   double get overallScore {
-    final scores = [contentScore, fluencyScore, structureScore, confidenceScore];
+    final scores = [
+      contentScore,
+      fluencyScore,
+      structureScore,
+      confidenceScore,
+      lexicalScore,
+      answerQualityPercent,
+      emotionalConsistencyScore,
+    ];
     if (scores.every((s) => s == 0)) return 0;
     return scores.reduce((a, b) => a + b) / scores.length;
   }
@@ -279,6 +294,8 @@ class InterviewResult {
       emotionDistribution: emotionDist,
       dominantEmotion: video['dominant_emotion'] as String?,
       emotionalConsistency: (video['emotional_stability'] as num?)?.toDouble(),
+      llmFeedback: metriques['llm_feedback'] as String?,
+      answerQualityScore: (metriques['answer_quality_score'] as num?)?.toDouble(),
     );
   }
 
@@ -300,5 +317,11 @@ class InterviewResult {
         emotionDistribution: {'neutral': 0.55, 'happy': 0.25, 'surprise': 0.10, 'sad': 0.05, 'angry': 0.05},
         dominantEmotion: 'neutral',
         emotionalConsistency: 0.78,
+        llmFeedback: "La teva resposta mostra una bona comprensió del tema. "
+            "Has mantingut un to professional i has donat exemples concrets. "
+            "Per millorar, podries estructurar millor la teva resposta seguint "
+            "el mètode STAR (Situació, Tasca, Acció, Resultat) i reduir les "
+            "pauses llargues entre idees.",
+        answerQualityScore: 0.72,
       );
 }

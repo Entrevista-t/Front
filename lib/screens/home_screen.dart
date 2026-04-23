@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart' show EntrevistatApp;
 import '../models/interview_models.dart';
 import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart' show kFontSans;
+import '../widgets/home_tutorial_overlay.dart';
 // TODO: Uncomment when recent sessions section is re-enabled
 // import '../widgets/app_section_header.dart';
 import '../widgets/dot_grid_background.dart';
@@ -32,9 +34,16 @@ class _HomeScreenState extends State<HomeScreen>
   bool _canScrollLeft = false;
   bool _canScrollRight = false;
   bool _imagesPrecached = false;
+  bool _tutorialActive = false;
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   late final AnimationController _entranceCtrl;
+
+  // Tutorial spotlight keys
+  final _welcomeKey = GlobalKey();
+  final _searchKey = GlobalKey();
+  final _gridKey = GlobalKey();
+  final _profileKey = GlobalKey();
 
   String get _greeting {
     final hour = DateTime.now().hour;
@@ -159,7 +168,65 @@ class _HomeScreenState extends State<HomeScreen>
         _loading = false;
       });
       _restartEntrance(_filteredCategories.length);
+      _checkOnboarding();
     }
+  }
+
+  Future<void> _checkOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    final shown = prefs.getBool('home_onboarding_shown') ?? false;
+    if (!shown && mounted) {
+      // Wait for entrance animation to finish so targets are laid out
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (!mounted) return;
+      await _showTutorial();
+      await prefs.setBool('home_onboarding_shown', true);
+    }
+  }
+
+  Future<void> _showTutorial() async {
+    if (_tutorialActive) return;
+    _tutorialActive = true;
+    final steps = [
+      TutorialStep(
+        title: 'Benvingut/da!',
+        description:
+            'Aquesta és la teva pàgina principal. Des d\'aquí pots accedir '
+            'a totes les funcionalitats d\'Entrevista\'t.',
+        targetKey: _welcomeKey,
+        icon: Icons.waving_hand_rounded,
+        accentColor: const Color(0xFF3B82F6),
+      ),
+      TutorialStep(
+        title: 'Cerca categories',
+        description:
+            'Utilitza el cercador per trobar ràpidament la categoria '
+            'professional que necessites.',
+        targetKey: _searchKey,
+        icon: Icons.search_rounded,
+        accentColor: const Color(0xFF14B8A6),
+      ),
+      TutorialStep(
+        title: 'Escull una categoria',
+        description:
+            'Selecciona una categoria per començar una entrevista simulada. '
+            'La IA et farà una pregunta aleatòria del sector escollit.',
+        targetKey: _gridKey,
+        icon: Icons.category_rounded,
+        accentColor: const Color(0xFFF59E0B),
+      ),
+      TutorialStep(
+        title: 'El teu perfil',
+        description:
+            'Accedeix al teu perfil per veure l\'historial d\'entrevistes, '
+            'els resultats i gestionar el teu compte.',
+        targetKey: _profileKey,
+        icon: Icons.person_rounded,
+        accentColor: const Color(0xFF8B5CF6),
+      ),
+    ];
+    await startHomeTutorial(context, steps);
+    _tutorialActive = false;
   }
 
   double get _averageScore {
@@ -202,7 +269,13 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded),
+            tooltip: 'Tutorial',
+            onPressed: _showTutorial,
+          ),
           Padding(
+            key: _profileKey,
             padding: const EdgeInsets.only(right: kS12),
             child: _ProfileMenuButton(
               onProfile: () => context.go('/profile'),
@@ -229,6 +302,7 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   // ── Welcome text (centered) ─────────────────────────
                   Padding(
+                    key: _welcomeKey,
                     padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
                     child: Column(children: [
                       Text(
@@ -258,6 +332,7 @@ class _HomeScreenState extends State<HomeScreen>
                   // ── Search bar (centered, discrete) ─────────────────
                   Center(
                     child: ConstrainedBox(
+                      key: _searchKey,
                       constraints: const BoxConstraints(maxWidth: 420),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
@@ -300,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ],
 
                   // ── Category cards (responsive mosaic grid) ──────────
-                  _buildCategoryGrid(),
+                  KeyedSubtree(key: _gridKey, child: _buildCategoryGrid()),
 
                   const SizedBox(height: kS16),
 
