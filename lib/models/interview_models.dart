@@ -218,9 +218,10 @@ class InterviewResult {
 
   double get structureScore => (discourseCoherence ?? 0) * 100;
   double get lexicalScore => (lexicalRichness ?? 0) * 100;
+  double get answerQualityPercent => (answerQualityScore ?? 0) * 100;
 
   double get overallScore {
-    final scores = [contentScore, fluencyScore, structureScore, confidenceScore];
+    final scores = [contentScore, fluencyScore, structureScore, confidenceScore, answerQualityPercent];
     if (scores.every((s) => s == 0)) return 0;
     return scores.reduce((a, b) => a + b) / scores.length;
   }

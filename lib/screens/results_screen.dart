@@ -322,7 +322,7 @@ class _ResultsScreenState extends State<ResultsScreen>
     final cardInnerWidth = wide
         ? (contentWidth - kS16) / 2 - kS24 * 2 - 2 // -2 for AppCard border
         : contentWidth - kS24 * 2 - 2;
-    final circleSize = ((cardInnerWidth - kS8 * 6) / 3).clamp(60.0, 130.0);
+    final circleSize = ((cardInnerWidth - kS8 * 8) / 4).clamp(55.0, 110.0);
     final rendiment = _buildRendimentCard(r, circleSize, stretched: wide);
     final punts = _buildStrengthsBars(r);
     if (wide) {
@@ -366,6 +366,10 @@ class _ResultsScreenState extends State<ResultsScreen>
                 padding: const EdgeInsets.symmetric(horizontal: kS8),
                 child: _circleScore('Seguretat', r.confidenceScore, circleSize),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: kS8),
+                child: _circleScore('Qualitat', r.answerQualityPercent, circleSize),
+              ),
             ],
           ),
           if (stretched) const Spacer() else const SizedBox(height: kS8),
@@ -390,6 +394,8 @@ class _ResultsScreenState extends State<ResultsScreen>
           _horizontalBar('Estructura', r.structureScore),
           const SizedBox(height: kS16),
           _horizontalBar('Seguretat', r.confidenceScore),
+          const SizedBox(height: kS16),
+          _horizontalBar('Qualitat', r.answerQualityPercent),
         ],
       ),
     );
@@ -483,8 +489,6 @@ class _ResultsScreenState extends State<ResultsScreen>
 
   Widget _buildLlmFeedback(InterviewResult r) {
     final radius = BorderRadius.circular(kRadiusMd);
-    final qualityPct = ((r.answerQualityScore ?? 0) * 100).clamp(0.0, 100.0);
-    final qualityColor = scoreColor(qualityPct);
     return Container(
       decoration: BoxDecoration(
         gradient: context.colors.gradientCardBorder,
@@ -505,32 +509,6 @@ class _ResultsScreenState extends State<ResultsScreen>
               const SizedBox(width: kS8),
               AppSectionHeader(title: 'Feedback'),
             ]),
-            const SizedBox(height: kS16),
-            // Answer quality score indicator
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: kS12, vertical: kS8),
-              decoration: BoxDecoration(
-                color: qualityColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(kRadiusSm),
-                border: Border.all(color: qualityColor.withValues(alpha: 0.20)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.verified_rounded, size: 16, color: qualityColor),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Qualitat de la resposta: ${qualityPct.toInt()}%',
-                    style: TextStyle(
-                      fontFamily: 'Satoshi',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: qualityColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: kS12),
             Text(
               r.llmFeedback ?? 'Feedback no disponible',
