@@ -18,7 +18,7 @@ class ResultsScreen extends StatefulWidget {
 }
 
 /// Total number of staggered sections for entrance animation.
-const _sectionCount = 6;
+const _sectionCount = 7;
 
 class _ResultsScreenState extends State<ResultsScreen>
     with TickerProviderStateMixin {
@@ -229,9 +229,11 @@ class _ResultsScreenState extends State<ResultsScreen>
               const SizedBox(height: kS16),
               _entrance(3, _buildTranscript(r)),
               const SizedBox(height: kS16),
-              _entrance(4, _buildReportsList(r)),
+              _entrance(4, _buildDetailCards(r)),
+              const SizedBox(height: kS16),
+              _entrance(5, _buildReportsList(r)),
               const SizedBox(height: kS24),
-              _entrance(5, ElevatedButton(
+              _entrance(6, ElevatedButton(
                 onPressed: () => context.go('/home'),
                 child: const Text('Nova simulació'),
               )),
@@ -488,6 +490,54 @@ class _ResultsScreenState extends State<ResultsScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDetailCards(InterviewResult r) {
+    return Row(
+      children: [
+        Expanded(child: _miniCard(r.wordsPerMinute.toStringAsFixed(0), 'Paraules per minut', Icons.speed_rounded)),
+        const SizedBox(width: kS8),
+        Expanded(child: _miniCard('${r.speechRatio.toStringAsFixed(0)}%', 'Temps de parla', Icons.mic_rounded)),
+        const SizedBox(width: kS8),
+        Expanded(child: _miniCard(_emotionLabel(r.dominantEmotion), 'Emoció predominant', Icons.face_rounded)),
+        const SizedBox(width: kS8),
+        Expanded(child: _miniCard('${r.lexicalScore.toStringAsFixed(0)}%', 'Riquesa lèxica', Icons.auto_stories_rounded)),
+      ],
+    );
+  }
+
+  Widget _miniCard(String value, String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: kS16, horizontal: kS8),
+      decoration: BoxDecoration(
+        color: context.colors.bgSurface,
+        borderRadius: BorderRadius.circular(kRadiusMd),
+        border: Border.all(color: context.colors.borderSubtle),
+        boxShadow: kShadowSm,
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(kS6),
+            decoration: BoxDecoration(
+              color: kAccent.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(kRadiusSm),
+              boxShadow: [
+                BoxShadow(
+                  color: kAccent.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Icon(icon, color: kAccent, size: 18),
+          ),
+          const SizedBox(height: kS8),
+          Text(value, style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: kS4),
+          Text(label, style: Theme.of(context).textTheme.labelSmall, textAlign: TextAlign.center),
+        ],
       ),
     );
   }
