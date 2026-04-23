@@ -220,6 +220,7 @@ class _InterviewScreenState extends State<InterviewScreen>
     if (_error != null) return _buildError();
 
     final question = _question ?? Question.fallback().first;
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
       body: DotGridBackground(
@@ -243,7 +244,7 @@ class _InterviewScreenState extends State<InterviewScreen>
                               fontFamily: kFontSans,
                               fontWeight: FontWeight.w600,
                               fontStyle: FontStyle.normal,
-                              fontSize: 38,
+                              fontSize: isMobile ? 22 : 38,
                               height: 1.25,
                             ),
                             textAlign: TextAlign.center,
@@ -308,7 +309,7 @@ class _InterviewScreenState extends State<InterviewScreen>
                                 ),
                               ),
                               child: AspectRatio(
-                                aspectRatio: 16 / 9,
+                                aspectRatio: isMobile ? 9 / 16 : 16 / 9,
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(kRadiusMd),
                                   child: Stack(
