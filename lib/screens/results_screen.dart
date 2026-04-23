@@ -18,7 +18,7 @@ class ResultsScreen extends StatefulWidget {
 }
 
 /// Total number of staggered sections for entrance animation.
-const _sectionCount = 7;
+const _sectionCount = 6;
 
 class _ResultsScreenState extends State<ResultsScreen>
     with TickerProviderStateMixin {
@@ -229,11 +229,9 @@ class _ResultsScreenState extends State<ResultsScreen>
               const SizedBox(height: kS16),
               _entrance(3, _buildTranscript(r)),
               const SizedBox(height: kS16),
-              _entrance(4, _buildDetailCards(r)),
-              const SizedBox(height: kS16),
-              _entrance(5, _buildReportsList(r)),
+              _entrance(4, _buildReportsList(r)),
               const SizedBox(height: kS24),
-              _entrance(6, ElevatedButton(
+              _entrance(5, ElevatedButton(
                 onPressed: () => context.go('/home'),
                 child: const Text('Nova simulació'),
               )),
@@ -316,128 +314,36 @@ class _ResultsScreenState extends State<ResultsScreen>
 
   Widget _buildPerformanceRow(InterviewResult r) {
     final screenWidth = MediaQuery.of(context).size.width;
-    // Content width mirrors the ConstrainedBox(maxWidth:900) + ListView padding
     final contentWidth = screenWidth.clamp(0.0, 900.0) - kPagePadding * 2;
-    final wide = contentWidth >= 600;
-    final cardInnerWidth = wide
-        ? (contentWidth - kS16) / 2 - kS24 * 2 - 2 // -2 for AppCard border
-        : contentWidth - kS24 * 2 - 2;
-    final circleSize = ((cardInnerWidth - kS8 * 8) / 4).clamp(55.0, 110.0);
-    final rendiment = _buildRendimentCard(r, circleSize, stretched: wide);
-    final punts = _buildStrengthsBars(r);
-    if (wide) {
-      return IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: rendiment),
-            const SizedBox(width: kS16),
-            Expanded(child: punts),
-          ],
-        ),
-      );
-    }
-    return Column(children: [
-      rendiment,
-      const SizedBox(height: kS16),
-      punts,
-    ]);
-  }
+    // 7 circles: size based on fitting ~4 per row on wide, ~3 on narrow
+    final cols = contentWidth >= 600 ? 7 : (contentWidth >= 400 ? 4 : 3);
+    final circleSize = ((contentWidth - kS24 * 2 - kS16 * (cols - 1)) / cols).clamp(55.0, 100.0);
 
-  Widget _buildRendimentCard(InterviewResult r, double circleSize, {bool stretched = false}) {
+    final metrics = [
+      ('Contingut', r.contentScore),
+      ('Fluïdesa', r.fluencyScore),
+      ('Estructura', r.structureScore),
+      ('Seguretat', r.confidenceScore),
+      ('Lèxic', r.lexicalScore),
+      ('Qualitat', r.answerQualityPercent),
+      ('Emocional', r.emotionalConsistencyScore),
+    ];
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppSectionHeader(title: 'Rendiment'),
-          if (stretched) const Spacer() else const SizedBox(height: kS24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: kS8),
-                child: _circleScore('Contingut', r.contentScore, circleSize),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: kS8),
-                child: _circleScore('Fluïdesa', r.fluencyScore, circleSize),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: kS8),
-                child: _circleScore('Seguretat', r.confidenceScore, circleSize),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: kS8),
-                child: _circleScore('Qualitat', r.answerQualityPercent, circleSize),
-              ),
-            ],
+          const SizedBox(height: kS24),
+          Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: kS16,
+            runSpacing: kS20,
+            children: metrics.map((m) => _circleScore(m.$1, m.$2, circleSize)).toList(),
           ),
-          if (stretched) const Spacer() else const SizedBox(height: kS8),
+          const SizedBox(height: kS8),
         ],
       ),
-    );
-  }
-
-  Widget _buildStrengthsBars(InterviewResult r) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppSectionHeader(title: 'Punts forts i febles'),
-          const SizedBox(height: kS20),
-          _horizontalBar('Contingut', r.contentScore),
-          const SizedBox(height: kS16),
-          _horizontalBar('Fluïdesa', r.fluencyScore),
-          const SizedBox(height: kS16),
-          _horizontalBar('Lèxic', r.lexicalScore),
-          const SizedBox(height: kS16),
-          _horizontalBar('Estructura', r.structureScore),
-          const SizedBox(height: kS16),
-          _horizontalBar('Seguretat', r.confidenceScore),
-          const SizedBox(height: kS16),
-          _horizontalBar('Qualitat', r.answerQualityPercent),
-        ],
-      ),
-    );
-  }
-
-  Widget _horizontalBar(String label, double value) {
-    final color = scoreColor(value);
-    final curved = CurvedAnimation(parent: _scoreCtrl, curve: Curves.easeOutCubic);
-    final tween = Tween<double>(begin: 0, end: (value / 100).clamp(0.0, 1.0));
-
-    return AnimatedBuilder(
-      animation: curved,
-      builder: (context, child) {
-        final animValue = tween.evaluate(curved);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(label, style: Theme.of(context).textTheme.bodySmall),
-                Text(
-                  '${(animValue * 100).toInt()}%',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600, color: color,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: kS4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(kRadiusSm),
-              child: LinearProgressIndicator(
-                value: animValue,
-                minHeight: 10,
-                backgroundColor: context.colors.borderSubtle,
-                valueColor: AlwaysStoppedAnimation(color),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -586,79 +492,42 @@ class _ResultsScreenState extends State<ResultsScreen>
     );
   }
 
-  Widget _buildDetailCards(InterviewResult r) {
-    return Row(
-      children: [
-        Expanded(child: _miniCard(r.wordsPerMinute.toStringAsFixed(0), 'Paraules per minut', Icons.speed_rounded)),
-        const SizedBox(width: kS8),
-        Expanded(child: _miniCard('${r.speechRatio.toStringAsFixed(0)}%', 'Temps de parla', Icons.mic_rounded)),
-        const SizedBox(width: kS8),
-        Expanded(child: _miniCard(_emotionLabel(r.dominantEmotion), 'Emoció predominant', Icons.face_rounded)),
-        const SizedBox(width: kS8),
-        Expanded(child: _miniCard('${r.lexicalScore.toStringAsFixed(0)}%', 'Riquesa lèxica', Icons.auto_stories_rounded)),
-      ],
-    );
-  }
-
-  Widget _miniCard(String value, String label, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: kS16, horizontal: kS8),
-      decoration: BoxDecoration(
-        color: context.colors.bgSurface,
-        borderRadius: BorderRadius.circular(kRadiusMd),
-        border: Border.all(color: context.colors.borderSubtle),
-        boxShadow: kShadowSm,
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(kS6),
-            decoration: BoxDecoration(
-              color: kAccent.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(kRadiusSm),
-              boxShadow: [
-                BoxShadow(
-                  color: kAccent.withValues(alpha: 0.08),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-            child: Icon(icon, color: kAccent, size: 18),
-          ),
-          const SizedBox(height: kS8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: kS4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildReportsList(InterviewResult r) {
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppSectionHeader(title: 'Detall de metriques'),
+          AppSectionHeader(title: 'Detall de mètriques'),
           const SizedBox(height: kS12),
           const Divider(),
+          _reportItem('Contingut', '${r.contentScore.toStringAsFixed(0)}%', kAccent, Icons.topic_rounded,
+            description: "Mitjana d'alineació amb la pregunta, densitat informativa i especificitat."),
+          _reportItem('Fluïdesa', '${r.fluencyScore.toStringAsFixed(0)}%', kAccent, Icons.speed_rounded,
+            description: "Combinació del ritme de parla (paraules/minut) i la proporció de temps parlant."),
+          _reportItem('Estructura', '${r.structureScore.toStringAsFixed(0)}%', kAccent, Icons.linear_scale_rounded,
+            description: "Coherència global del discurs: connexió lògica entre les idees exposades."),
+          _reportItem('Seguretat', '${r.confidenceScore.toStringAsFixed(0)}%', kAccent, Icons.shield_rounded,
+            description: "Índex de confiança basat en el to de veu i la fermesa en la comunicació."),
+          _reportItem('Riquesa lèxica', '${r.lexicalScore.toStringAsFixed(0)}%', kAccent, Icons.auto_stories_rounded,
+            description: "Varietat i riquesa del vocabulari emprat en la resposta."),
+          _reportItem('Qualitat de la resposta', '${r.answerQualityPercent.toStringAsFixed(0)}%', kAccent, Icons.verified_rounded,
+            description: "Valoració global de com de bé la resposta aborda la pregunta formulada."),
+          _reportItem('Estabilitat emocional', '${r.emotionalConsistencyScore.toStringAsFixed(0)}%', kAccent, Icons.psychology_rounded,
+            description: "Consistència de les expressions facials durant la resposta."),
           _reportItem('Alineació amb la pregunta', (r.questionAlignment ?? 0).toStringAsFixed(2), kAccent, Icons.track_changes_rounded,
             description: "Mesura com de relacionada està la resposta amb la pregunta formulada."),
-          _reportItem('Coherència del discurs', (r.discourseCoherence ?? 0).toStringAsFixed(2), kAccent, Icons.linear_scale_rounded,
+          _reportItem('Coherència del discurs', (r.discourseCoherence ?? 0).toStringAsFixed(2), kAccent, Icons.account_tree_rounded,
             description: "Avalua la connexió lògica i el fil conductor entre les idees exposades."),
           _reportItem('Densitat informativa', (r.informationDensity ?? 0).toStringAsFixed(2), kAccent, Icons.density_medium_rounded,
             description: "Proporció de paraules amb contingut rellevant respecte al total."),
           _reportItem("Índex d'especificitat", (r.specificityIndex ?? 0).toStringAsFixed(2), kAccent, Icons.precision_manufacturing_rounded,
             description: "Grau de concreció i detall en la resposta, evitant generalitats."),
-          _reportItem('Estabilitat emocional', (r.emotionalConsistency ?? 0).toStringAsFixed(2), kAccent, Icons.psychology_rounded,
-            description: "Consistència de les expressions facials durant la resposta."),
+          _reportItem('Paraules per minut', r.wordsPerMinute.toStringAsFixed(0), kAccent, Icons.timer_rounded,
+            description: "Ritme de comunicació. El rang ideal és entre 120 i 170 paraules per minut."),
+          _reportItem('Temps de parla', '${r.speechRatio.toStringAsFixed(0)}%', kAccent, Icons.mic_rounded,
+            description: "Percentatge del temps total que s'ha dedicat a parlar activament."),
+          _reportItem('Emoció predominant', _emotionLabel(r.dominantEmotion), kAccent, Icons.face_rounded,
+            description: "L'expressió facial detectada amb més freqüència durant la resposta."),
         ],
       ),
     );
