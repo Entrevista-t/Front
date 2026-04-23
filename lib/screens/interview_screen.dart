@@ -298,7 +298,10 @@ class _InterviewScreenState extends State<InterviewScreen>
                       // ── Camera preview (clean, static border) ─────────────
                       Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 560),
+                          constraints: BoxConstraints(
+                            maxWidth: isMobile ? 220 : 560,
+                            maxHeight: isMobile ? 320 : double.infinity,
+                          ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: kPagePadding),
                             child: Container(
