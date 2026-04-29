@@ -199,13 +199,13 @@ class InterviewResult {
   // ── Derived scores (client-side heuristics, 0-100) ──
 
   double get wordsPerMinute => communicationRhythmWpm ?? 0;
-  double get confidenceScore => (confidenceIndex ?? 0) * 100;
+  double get confidenceScore => ((confidenceIndex ?? 0) * 100).clamp(0, 100);
 
   double get contentScore {
     final values = [questionAlignment, informationDensity, specificityIndex]
         .whereType<double>().toList();
     if (values.isEmpty) return 0;
-    return (values.reduce((a, b) => a + b) / values.length) * 100;
+    return ((values.reduce((a, b) => a + b) / values.length) * 100).clamp(0, 100);
   }
 
   double get fluencyScore {
@@ -213,13 +213,13 @@ class InterviewResult {
         ? (activeSpeechTime! / durationTotal!).clamp(0.0, 1.0) : 0.0;
     final wpmNorm = communicationRhythmWpm != null
         ? (1.0 - ((communicationRhythmWpm! - 145).abs() / 145)).clamp(0.0, 1.0) : 0.0;
-    return (sr * 0.5 + wpmNorm * 0.5) * 100;
+    return ((sr * 0.5 + wpmNorm * 0.5) * 100).clamp(0, 100);
   }
 
-  double get structureScore => (discourseCoherence ?? 0) * 100;
-  double get lexicalScore => (lexicalRichness ?? 0) * 100;
-  double get answerQualityPercent => (answerQualityScore ?? 0) * 100;
-  double get emotionalConsistencyScore => (emotionalConsistency ?? 0) * 100;
+  double get structureScore => ((discourseCoherence ?? 0) * 100).clamp(0, 100);
+  double get lexicalScore => ((lexicalRichness ?? 0) * 100).clamp(0, 100);
+  double get answerQualityPercent => ((answerQualityScore ?? 0) * 100).clamp(0, 100);
+  double get emotionalConsistencyScore => ((emotionalConsistency ?? 0) * 100).clamp(0, 100);
 
   double get overallScore {
     final scores = [
@@ -231,8 +231,12 @@ class InterviewResult {
       answerQualityPercent,
       emotionalConsistencyScore,
     ];
-    if (scores.every((s) => s == 0)) return 0;
-    return scores.reduce((a, b) => a + b) / scores.length;
+    final nonZero = scores.where((s) => s > 0).toList();
+    if (nonZero.isEmpty) return 0;
+    nonZero.sort();
+    final mid = nonZero.length ~/ 2;
+    if (nonZero.length.isOdd) return nonZero[mid];
+    return (nonZero[mid - 1] + nonZero[mid]) / 2;
   }
 
   double get speechRatio {
