@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +18,37 @@ class ApiService {
   static String? _userEmail;
   static String? _userCreatedAt;
   static String? _userPhotoUrl;
+
+  /// Notifies GoRouter when auth state changes (login/logout/expiry).
+  /// GoRouter listens via `refreshListenable` and re-evaluates its redirect.
+  static final authNotifier = ValueNotifier<int>(0);
+
+  static void _notifyAuthChange() {
+    authNotifier.value++;
+  }
+
+  /// Checks if the current token's `exp` claim has passed.
+  static bool _isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      // Decode the payload (base64url)
+      String payload = parts[1];
+      // Pad to multiple of 4
+      switch (payload.length % 4) {
+        case 2: payload += '=='; break;
+        case 3: payload += '='; break;
+      }
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final map = jsonDecode(decoded) as Map<String, dynamic>;
+      final exp = map['exp'] as int?;
+      if (exp == null) return false;
+      final expiry = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+      return DateTime.now().isAfter(expiry);
+    } catch (_) {
+      return true;
+    }
+  }
 
   // ── Dev bypass ──────────────────────────────────────────────────────────────
 
@@ -75,6 +107,7 @@ class ApiService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', _token!);
       await _fetchAndCacheProfile();
+      _notifyAuthChange();
     } else {
       throw Exception('Credencials incorrectes');
     }
@@ -113,11 +146,17 @@ class ApiService {
     await prefs.remove('user_email');
     await prefs.remove('user_created_at');
     await prefs.remove('user_photo_url');
+    _notifyAuthChange();
   }
 
   static Future<bool> isLoggedIn() async {
     await _loadToken();
-    return _token != null;
+    if (_token == null) return false;
+    if (_isTokenExpired(_token!)) {
+      await logout();
+      return false;
+    }
+    return true;
   }
 
   // ── User Profile ───────────────────────────────────────────────────────────
