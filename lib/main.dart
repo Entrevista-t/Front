@@ -42,15 +42,30 @@ CustomTransitionPage<void> _fadePage(Widget child) {
 final _router = GoRouter(
   initialLocation: '/landing',
   debugLogDiagnostics: true,
+  refreshListenable: ApiService.authNotifier,
   redirect: (context, state) async {
     final path = state.uri.path;
+
     if (kDevBypassLogin) {
-      // When bypassing auth, redirect bare root to landing
       if (path == '/') return '/landing';
       return null;
     }
+
+    const publicPaths = {'/landing', '/login', '/faq', '/privacy'};
+    final isPublic = publicPaths.contains(path);
     final loggedIn = await ApiService.isLoggedIn();
-    if (path == '/') return loggedIn ? '/home' : '/login';
+
+    // Not logged in trying to access a protected route → redirect to landing
+    if (!loggedIn && !isPublic) return '/landing';
+
+    // Logged in visiting login/landing → redirect to home
+    if (loggedIn && (path == '/login' || path == '/landing' || path == '/')) {
+      return '/home';
+    }
+
+    // Root path without login
+    if (path == '/' && !loggedIn) return '/landing';
+
     return null;
   },
   routes: [
