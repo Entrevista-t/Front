@@ -38,12 +38,14 @@
   - [Reusable Widgets](#reusable-widgets)
   - [Theme & Design System](#theme--design-system)
   - [Routing](#routing)
+  - [Service Architecture](#service-architecture)
 - [Tech Stack](#tech-stack)
 - [Requirements](#requirements)
 - [Getting Started](#getting-started)
   - [Docker (Recommended)](#docker-recommended)
   - [Local Flutter](#local-flutter)
 - [Available Commands](#available-commands)
+- [CI/CD](#cicd)
 - [Project Structure](#project-structure)
 - [Configuration](#configuration)
 - [Contributing](#contributing)
@@ -53,7 +55,7 @@
 
 ## Disclaimer
 
-This project is under active development as part of an academic initiative. Features, UI, and APIs may change without notice. The backend (FastAPI + PostgreSQL) lives in a [separate repository](https://github.com/Entrevista-t) and is required for full functionality — without it, the app falls back to mock/offline data.
+This project is under active development as part of an academic initiative. Features, UI, and APIs may change without notice. The backend (FastAPI + PostgreSQL) lives in a [separate repository](https://github.com/Entrevista-t/Back) and is required for full functionality — without it, the app falls back to mock/offline data.
 
 ---
 
@@ -65,10 +67,20 @@ All user-facing text is written in **Catalan (Català)**. Code, comments, and do
 
 ### User Flow
 
-```
-Landing → Login/Register → Dashboard (pick category)
-  → Interview (camera + timer + questions)
-    → AI Evaluation → Results (scores, charts, PDF report)
+```mermaid
+flowchart TD
+    A[🏠 Landing Page] --> B{Authenticated?}
+    B -->|No| C[🔐 Login / Register]
+    B -->|Yes| D[📋 Dashboard]
+    C --> D
+    D --> E[🎥 Interview Session]
+    E --> F[⏳ AI Processing]
+    F --> G[📊 Results & Scores]
+    G --> H[📄 PDF Report Sent]
+    D --> I[👤 Profile]
+    I --> J[✏️ Edit Profile]
+    D --> K[❓ FAQ]
+    D --> L[🔒 Privacy Policy]
 ```
 
 ### Key Features
@@ -90,7 +102,7 @@ The app follows a **glassmorphism** design language:
 - Frosted-glass cards with `BackdropFilter` blur and semi-transparent backgrounds
 - Animated dot-grid backgrounds with radial glow orbs
 - Stagger-in entrance animations and floating card effects
-- **Gambetta** (serif) for headlines, **Satoshi** (sans-serif) for body text
+- **Gambetta** (serif) for headlines, **Satoshi** (sans-serif) for body text, **Noto Sans** as fallback
 - Indigo (`#6366F1`) as the primary accent colour
 
 ---
@@ -119,11 +131,12 @@ The app follows a **glassmorphism** design language:
 | `DotGridBackground` | Animated radial dot pattern with optional glow orbs |
 | `FloatingGlassCard` | Glassmorphism card with floating translate + rotate animation |
 | `GlassContainer` | Static frosted-glass container |
-| `FaqAccordion` | Expandable FAQ item with chevron rotation |
-| `OnboardingDialog` | 4-slide PageView carousel tutorial |
+| `FaqAccordionSection` | Expandable FAQ item with chevron rotation |
+| `OnboardingDialog` | 4-slide PageView carousel tutorial for the interview flow |
+| `HomeTutorialOverlay` | Guided spotlight overlay for the dashboard — highlights widgets with tooltip cards |
 | `AppCard` | Standard card with optional hover elevation |
 | `AppEmptyState` | Icon + message placeholder for empty views |
-| `AppSectionHeader` | Section title row with optional trailing action |
+| `AppSectionHeader` | Section title row with optional trailing action (also exports `AppLabel` and `AppChip`) |
 | `GlowIcon` | Tinted icon in rounded square with radial glow |
 | `ScoreBadge` | Circular animated score indicator (colour-coded) |
 | `SessionTile` | List tile for an interview session entry |
@@ -146,23 +159,49 @@ Routing uses **GoRouter v14** defined in `main.dart`. All route transitions use 
 
 A dev bypass (`kDevBypassLogin = true`) skips authentication and redirects `/` to `/landing` for UI development.
 
+### Service Architecture
+
+```mermaid
+flowchart LR
+    subgraph UI["UI Layer"]
+        S[Screens] --> W[Widgets]
+    end
+    subgraph Logic["Logic Layer"]
+        SV[ApiService]
+        TH[ThemeNotifier]
+    end
+    subgraph Data["Data Layer"]
+        M["Models\n(InterviewCategory,\nQuestion, Session, Result)"]
+        SP[SharedPreferences]
+    end
+    S --> SV
+    S --> TH
+    SV --> M
+    SV -->|"HTTP + JWT"| API["FastAPI Backend"]
+    TH --> SP
+```
+
+`ApiService` handles all HTTP communication, JWT token storage, automatic session expiry, and result polling (retries up to 30 × 2 s while the backend runs AI analysis).
+
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Flutter 3.27.1 (Dart 3.6+) |
-| Routing | GoRouter 14 |
+| Framework | Flutter 3.27.1 (Dart ≥ 3.6) |
+| Routing | GoRouter 14.6 |
 | Camera | `camera` plugin |
 | Charts | fl_chart |
 | HTTP | `http` + `http_parser` |
 | Storage | SharedPreferences |
+| File picking | file_picker |
 | External links | url_launcher |
 | Permissions | permission_handler |
 | Backend | FastAPI + PostgreSQL *(separate repo)* |
 | Dev server | Docker + Flutter web-server |
 | Production | Docker + Nginx Alpine |
+| CI/CD | GitHub Actions → GHCR → Docker Swarm |
 
 ---
 
@@ -170,7 +209,7 @@ A dev bypass (`kDevBypassLogin = true`) skips authentication and redirects `/` t
 
 - **Docker** (recommended) — Docker Desktop or Docker Engine
 - **Or** Flutter SDK ≥ 3.27.1 with web support enabled
-- A running instance of the [Entrevista't backend](https://github.com/Entrevista-t) for full functionality
+- A running instance of the [Entrevista't backend](https://github.com/Entrevista-t/Back) for full functionality
 
 ---
 
@@ -243,6 +282,17 @@ All commands can be run via `./start.ps1` or directly:
 
 ---
 
+## CI/CD
+
+The repository ships with a GitHub Actions workflow (`.github/workflows/deploy-prod.yml`) that automates production deployments:
+
+1. **Trigger** — push to `main`
+2. **Build** — multi-stage Docker image with the production `API_URL` baked in
+3. **Push** — image is pushed to GitHub Container Registry (GHCR)
+4. **Deploy** — SSH into the production swarm manager and update the running service
+
+---
+
 ## Project Structure
 
 ```
@@ -250,20 +300,21 @@ Front/
 ├── assets/
 │   ├── fonts/
 │   │   ├── Gambetta/          # Serif — headlines
-│   │   └── Satoshi/           # Sans-serif — body text
+│   │   ├── Satoshi/           # Sans-serif — body text
+│   │   └── Noto/              # Noto Sans — fallback / secondary
 │   └── images/
 │       ├── logo_entrevistat.png
 │       └── avatar_1–9.png     # User avatars
 ├── lib/
 │   ├── main.dart              # Entry point, routes, theme toggle
 │   ├── models/                # Data models (fromJson, fallback/mock)
-│   ├── screens/               # 11 screen widgets
+│   ├── screens/               # 10 routed screen widgets
 │   ├── services/              # API service (HTTP, auth, polling)
 │   ├── theme/
 │   │   ├── app_colors.dart    # Light + dark colour palettes
 │   │   ├── app_spacing.dart   # Spacing, radius, shadow tokens
 │   │   └── app_theme.dart     # ThemeData builder, ThemeNotifier
-│   └── widgets/               # 11 reusable UI components
+│   └── widgets/               # 12 reusable UI components
 ├── web/                       # Flutter web shell (index.html, manifest, icons)
 ├── test/                      # Widget tests
 ├── Dockerfile                 # Production (multi-stage → Nginx)
@@ -273,7 +324,9 @@ Front/
 ├── start.ps1                  # Interactive PowerShell launcher
 ├── pubspec.yaml               # Dependencies & asset declarations
 └── .github/
-    └── copilot-instructions.md
+    ├── copilot-instructions.md
+    └── workflows/
+        └── deploy-prod.yml    # CI/CD: build → GHCR → Docker Swarm deploy
 ```
 
 ---
@@ -303,4 +356,8 @@ Please ensure `flutter analyze` reports **0 issues** before submitting.
 
 ## License
 
-This project is part of an academic initiative. No formal license has been declared yet. Please contact the maintainers for usage permissions.
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+
+You are free to use, modify, and distribute this software under the terms of the AGPL-3.0. Any modified version that is accessible over a network must also be made available under the same license.
+
+See the [LICENSE](LICENSE) file for the full text.
