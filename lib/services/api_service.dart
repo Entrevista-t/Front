@@ -7,6 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/interview_models.dart';
 
 class ApiService {
+  static const String passwordCriteriaMessage =
+      "The password doesn't meet the criteria: It should have at least 8 characters, one uppercase letter, one lowercase letter, and one number.";
+
   static const String _baseUrl = String.fromEnvironment(
     'API_URL',
     defaultValue: 'https://api-entrevistat.kire.ovh',
@@ -127,8 +130,7 @@ class ApiService {
         throw Exception('Compte creat. Si us plau, inicia sessio manualment.');
       }
     } else {
-      final body = _tryDecodeBody(res.body);
-      throw Exception(body?['detail'] ?? 'Error en crear el compte');
+      throw Exception(_errorMessage(res, fallback: 'Error en crear el compte'));
     }
   }
 
@@ -385,9 +387,8 @@ class ApiService {
     throw Exception("Error carregant l'entrevista");
   }
 
-  /// Two-step interview submission:
-  /// 1) Create a pending interview record
-  /// 2) Upload video for analysis
+  /// Uploads the interview video and returns only after the backend has
+  /// received it and marked the interview as processing.
   static Future<String> submitInterview({
     required String questionId,
     required String questionText,
@@ -396,26 +397,11 @@ class ApiService {
   }) async {
     await _loadToken();
 
-    // Step 1: Create pending interview
-    final createRes = await http.post(
-      Uri.parse('$_baseUrl/entrevistas'),
-      headers: _jsonAuthHeaders,
-      body: jsonEncode({'id_pregunta': int.parse(questionId)}),
-    );
-    if (createRes.statusCode != 201) {
-      await _guard(createRes);
-      throw Exception("Error creant l'entrevista (${createRes.statusCode})");
-    }
-    final interviewId = jsonDecode(createRes.body)['id'].toString();
-
-    // Step 2: Upload video for analysis (fire-and-forget)
-    // The backend processes synchronously, which can take minutes.
-    // We send the request and return immediately so the user isn't blocked.
     final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/analyze'));
     request.headers['Authorization'] = 'Bearer $_token';
     request.fields['question'] = questionText;
     request.fields['language'] = 'ca';
-    request.fields['id_entrevista'] = interviewId;
+    request.fields['id_pregunta'] = questionId;
     // Derive MIME subtype from filename extension
     final ext = fileName.contains('.') ? fileName.split('.').last.toLowerCase() : 'webm';
     final mimeSubtype = (ext == 'webm') ? 'webm' : (ext == 'avi') ? 'x-msvideo' : ext;
@@ -425,16 +411,20 @@ class ApiService {
       filename: fileName,
       contentType: MediaType('video', mimeSubtype),
     ));
-    // Fire the request without awaiting the response — browser keeps it alive
-    request.send().then((streamed) async {
-      final res = await http.Response.fromStream(streamed);
-      if (res.statusCode != 200) {
-        developer.log('Analyze failed (${res.statusCode}): ${res.body}');
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    if (res.statusCode == 202 || res.statusCode == 200) {
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final status = (data['estat_proces'] as String?) ?? (data['estat'] as String?);
+      final interviewId = data['id_entrevista']?.toString();
+      if (interviewId != null && (status == 'processant' || status == 'completat')) {
+        return interviewId;
       }
-    }).catchError((e) {
-      developer.log('Analyze request error: $e');
-    });
-    return interviewId;
+      developer.log('Unexpected analyze acknowledgement: ${res.body}');
+      throw Exception("No s'ha pogut confirmar l'enviament de l'entrevista");
+    }
+    await _guard(res);
+    throw Exception(_errorMessage(res, fallback: "Error enviant l'entrevista (${res.statusCode})"));
   }
 
   /// Polls until the backend has finished processing.
@@ -499,5 +489,25 @@ class ApiService {
     } catch (_) {
       return null;
     }
+  }
+
+  static String _errorMessage(http.Response res, {required String fallback}) {
+    final body = _tryDecodeBody(res.body);
+    final detail = body?['detail'];
+    if (detail is String) return detail;
+    if (detail is List) {
+      final passwordError = detail.any((item) {
+        if (item is! Map) return false;
+        final loc = item['loc'];
+        return loc is List && loc.any((part) => part.toString() == 'password');
+      });
+      if (passwordError) return passwordCriteriaMessage;
+
+      for (final item in detail.whereType<Map>()) {
+        final msg = item['msg'];
+        if (msg is String) return msg;
+      }
+    }
+    return fallback;
   }
 }
