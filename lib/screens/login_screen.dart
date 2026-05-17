@@ -84,6 +84,10 @@ class _LoginScreenState extends State<LoginScreen>
       if (mounted) context.go('/home');
       return;
     }
+    if (!_isSignIn && !_passwordMeetsCriteria(_passwordController.text)) {
+      setState(() { _error = ApiService.passwordCriteriaMessage; });
+      return;
+    }
     setState(() { _loading = true; _error = null; });
     try {
       if (_isSignIn) {
@@ -97,6 +101,13 @@ class _LoginScreenState extends State<LoginScreen>
     } finally {
       if (mounted) setState(() { _loading = false; });
     }
+  }
+
+  bool _passwordMeetsCriteria(String password) {
+    return password.length >= 8 &&
+        RegExp(r'[A-Z]').hasMatch(password) &&
+        RegExp(r'[a-z]').hasMatch(password) &&
+        RegExp(r'[0-9]').hasMatch(password);
   }
 
   void _toggleMode() {
